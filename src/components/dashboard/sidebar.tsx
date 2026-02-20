@@ -3,7 +3,8 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
-import { Home, LogOut, ShoppingBag, ThermometerSun, Users, LifeBuoy, Shield, BarChart3, FileText } from "lucide-react"
+import { Home, LogOut, ShoppingBag, ThermometerSun, Users, LifeBuoy, Shield, BarChart3, FileText, MessageSquare } from "lucide-react"
+import { useUnreadCount } from "@/hooks/useUnreadCount"
 import { DecBadge } from "@/components/dashboard/dec-badge"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
@@ -18,6 +19,7 @@ export function SidebarContent({ userId, showBell = true }: { userId: string, sh
     const supabase = createClient()
     const [role, setRole] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
+    const { totalUnread } = useUnreadCount(userId)
 
     // Intenta deducir el rol inicial desde la URL para evitar parpadeos
     // Esto funciona solo si el usuario está en su dashboard principal (ej: /docente/...)
@@ -155,7 +157,17 @@ export function SidebarContent({ userId, showBell = true }: { userId: string, sh
             })
         }
 
-        // 6. Reportes (Todos menos estudiantes)
+        // 6. Chat interno (Todos menos estudiantes)
+        if (currentRole !== "estudiante" && currentRole !== "centro_alumnos") {
+            items.push({
+                title: "Chat",
+                href: "/chat",
+                icon: MessageSquare,
+                chatBadge: true,
+            })
+        }
+
+        // 7. Reportes (Todos menos estudiantes)
         if (currentRole !== "estudiante" && currentRole !== "centro_alumnos") {
             items.push({
                 title: "Reportes",
@@ -212,9 +224,14 @@ export function SidebarContent({ userId, showBell = true }: { userId: string, sh
                     >
                         <item.icon className="h-4 w-4" />
                         <span className="flex-1">{item.title}</span>
-                        {/* Badge solo para el item DEC */}
                         {/* @ts-ignore */}
                         {item.badge && <DecBadge />}
+                        {/* @ts-ignore */}
+                        {item.chatBadge && totalUnread > 0 && (
+                            <span className="min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                                {totalUnread > 9 ? "9+" : totalUnread}
+                            </span>
+                        )}
                     </Link>
                 ))}
             </nav>
