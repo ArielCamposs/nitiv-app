@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
-import { TeacherDashboardClient } from "@/components/docente/teacher-dashboard-client"
+import { TeacherDashboardClient, type Tendencia } from "@/components/docente/teacher-dashboard-client"
 
 const ENERGY_SCORE: Record<string, number> = {
     regulada: 4,
@@ -147,7 +147,7 @@ async function getTeacherData() {
     const avgFirst = firstHalf.length > 0 ? firstHalf.reduce((a, b) => a + b.score, 0) / firstHalf.length : null
     const avgSecond = secondHalf.length > 0 ? secondHalf.reduce((a, b) => a + b.score, 0) / secondHalf.length : null
 
-    const tendencia =
+    const tendencia: Tendencia =
         avgFirst === null || avgSecond === null ? "sin_datos" :
             avgSecond > avgFirst + 0.3 ? "mejorando" :
                 avgSecond < avgFirst - 0.3 ? "empeorando" :

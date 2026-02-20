@@ -25,7 +25,7 @@ const EMOTION_CONFIG = {
     muy_mal: { label: "Muy mal", emoji: "😞", color: "text-red-600" },
 } as const
 
-type Tendencia = "mejorando" | "empeorando" | "estable" | "sin_datos"
+export type Tendencia = "mejorando" | "empeorando" | "estable" | "sin_datos"
 
 interface Props {
     profile: { name: string; last_name: string }
@@ -77,8 +77,8 @@ export function TeacherDashboardClient({
                             key={c.id}
                             onClick={() => setSelectedCourse(c.id)}
                             className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${selectedCourse === c.id
-                                    ? "bg-slate-900 text-white"
-                                    : "bg-white text-slate-600 border border-slate-200 hover:border-slate-400"
+                                ? "bg-slate-900 text-white"
+                                : "bg-white text-slate-600 border border-slate-200 hover:border-slate-400"
                                 }`}
                         >
                             {c.name}
@@ -203,7 +203,8 @@ export function TeacherDashboardClient({
                                     tickFormatter={(v) => (["", "🔥", "😴", "😤", "😊"] as string[])[v] ?? v}
                                     tick={{ fontSize: 13 }} axisLine={false} tickLine={false} />
                                 <Tooltip
-                                    formatter={(value: number) => {
+                                    formatter={(value: number | undefined) => {
+                                        if (value === undefined) return ["Sin datos", "Clima"]
                                         const map: Record<number, string> = { 1: "Explosiva 🔥", 2: "Apática 😴", 3: "Inquieta 😤", 4: "Regulada 😊" }
                                         return [map[Math.round(value)] ?? value, "Clima"]
                                     }}
