@@ -1,4 +1,5 @@
 import { Sidebar } from "@/components/dashboard/sidebar"
+export const dynamic = "force-dynamic"
 import { MobileNav } from "@/components/dashboard/mobile-nav"
 import { NotificationBell } from "@/components/layout/notification-bell"
 import { createClient } from "@/lib/supabase/server"
