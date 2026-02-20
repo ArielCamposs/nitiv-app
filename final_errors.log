@@ -1,0 +1,24 @@
+
+> nitiv@0.1.0 build
+> next build
+
+▲ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+✓ Compiled successfully in 2.4s
+  Running TypeScript ...
+  Collecting page data using 11 workers ...
+  Generating static pages using 11 workers (0/6) ...
+Error occurred prerendering page "/login". Read more: https://nextjs.org/docs/messages/prerender-error
+Error: Invalid supabaseUrl: Must be a valid HTTP or HTTPS URL.
+    at <unknown> (C:\Users\campo\Proyectos-Web\nitiv\.next\server\chunks\ssr\_a33e2c73._.js:37:43509)
+    at new ch (C:\Users\campo\Proyectos-Web\nitiv\.next\server\chunks\ssr\_a33e2c73._.js:37:43691)
+    at <unknown> (C:\Users\campo\Proyectos-Web\nitiv\.next\server\chunks\ssr\_a33e2c73._.js:59:4312)
+    at cv (C:\Users\campo\Proyectos-Web\nitiv\.next\server\chunks\ssr\_a33e2c73._.js:59:4544)
+    at k (C:\Users\campo\Proyectos-Web\nitiv\.next\server\chunks\ssr\_0eea9300._.js:4:7305) {
+  digest: '4223912313'
+}
+Export encountered an error on /(auth)/login/page: /login, exiting the build.
+⨯ Next.js build worker exited with code: 1 and signal: null

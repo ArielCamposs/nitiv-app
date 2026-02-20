@@ -1,0 +1,9 @@
+src/app/(auth)/login/page.tsx(8,23): error TS2307: Cannot find module '@/components/ui/input' or its corresponding type declarations.
+src/app/(auth)/login/page.tsx(56,44): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/app/(auth)/login/page.tsx(69,44): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/components/emotional/emotional-checkin-card.tsx(30,16): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(values: readonly ["muy_bien", "bien", "neutral", "mal", "muy_mal"], params?: string | { error?: string | $ZodErrorMap<$ZodIssueInvalidValue<unknown>> | undefined; message?: string | undefined; } | undefined): ZodEnum<...>', gave the following error.
+    Object literal may only specify known properties, and 'required_error' does not exist in type '{ error?: string | $ZodErrorMap<$ZodIssueInvalidValue<unknown>> | undefined; message?: string | undefined; }'.
+  Overload 2 of 2, '(entries: Readonly<Record<string, EnumValue>>, params?: string | { error?: string | $ZodErrorMap<$ZodIssueInvalidValue<unknown>> | undefined; message?: string | undefined; } | undefined): ZodEnum<...>', gave the following error.
+    Argument of type 'string[]' is not assignable to parameter of type 'Readonly<Record<string, EnumValue>>'.
+      Index signature for type 'string' is missing in type 'string[]'.
