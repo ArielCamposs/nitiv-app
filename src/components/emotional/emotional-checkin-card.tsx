@@ -38,11 +38,18 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>
 
 const emotionsOptions = [
-    { value: "muy_bien", label: "Muy bien", color: "bg-emerald-500" },
-    { value: "bien", label: "Bien", color: "bg-emerald-300" },
-    { value: "neutral", label: "Neutral", color: "bg-slate-300" },
-    { value: "mal", label: "Mal", color: "bg-rose-300" },
-    { value: "muy_mal", label: "Muy mal", color: "bg-rose-500" },
+    { value: "muy_bien", label: "Muy bien", emoji: "😄", color: "border-emerald-500 bg-emerald-50 text-emerald-700" },
+    { value: "bien", label: "Bien", emoji: "🙂", color: "border-emerald-300 bg-emerald-50/60 text-emerald-600" },
+    { value: "neutral", label: "Neutral", emoji: "😐", color: "border-slate-300 bg-slate-50 text-slate-600" },
+    { value: "mal", label: "Mal", emoji: "😔", color: "border-rose-300 bg-rose-50 text-rose-600" },
+    { value: "muy_mal", label: "Muy mal", emoji: "😢", color: "border-rose-500 bg-rose-50 text-rose-700" },
+]
+
+// Lista de etiquetas emocionales clickeables
+const emotionTags = [
+    "Ansioso/a", "Cansado/a", "Motivado/a", "Triste", "Enojado/a",
+    "Tranquilo/a", "Confundido/a", "Alegre", "Estresado/a", "Solo/a",
+    "Esperanzado/a", "Aburrido/a", "Agradecido/a", "Asustado/a", "Orgulloso/a",
 ]
 
 function getTodayRange() {
@@ -251,76 +258,80 @@ export function EmotionalCheckinCard() {
 
             <form onSubmit={form.handleSubmit(onSubmit)}>
                 <CardContent className="space-y-6">
-                    {/* Emoción */}
-                    <div className="space-y-2">
+                    {/* Emoción principal — botones clickeables */}
+                    <div className="space-y-3">
                         <label className="text-sm font-medium text-slate-900">
-                            Elige una emoción
+                            ¿Cómo te sientes hoy?
                         </label>
-                        <Select
-                            onValueChange={(value) =>
-                                form.setValue("emotion", value as FormValues["emotion"])
-                            }
-                            value={form.watch("emotion")}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Selecciona una emoción" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {emotionsOptions.map((e) => (
-                                    <SelectItem key={e.value} value={e.value}>
-                                        <div className="flex items-center gap-2">
-                                            <span
-                                                className={`h-2 w-2 rounded-full ${e.color}`}
-                                            ></span>
-                                            <span>{e.label}</span>
-                                        </div>
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        <div className="flex flex-wrap gap-2">
+                            {emotionsOptions.map((e) => {
+                                const selected = form.watch("emotion") === e.value
+                                return (
+                                    <button
+                                        key={e.value}
+                                        type="button"
+                                        onClick={() => form.setValue("emotion", e.value as FormValues["emotion"], { shouldValidate: true })}
+                                        className={`flex items-center gap-2 rounded-full border-2 px-4 py-2 text-sm font-medium transition-all
+                                            ${selected
+                                                ? e.color + " scale-105 shadow-sm"
+                                                : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
+                                            }`}
+                                    >
+                                        <span>{e.emoji}</span>
+                                        <span>{e.label}</span>
+                                    </button>
+                                )
+                            })}
+                        </div>
                         {form.formState.errors.emotion && (
-                            <p className="text-xs text-red-500">
-                                {form.formState.errors.emotion.message}
-                            </p>
+                            <p className="text-xs text-red-500">{form.formState.errors.emotion.message}</p>
                         )}
                     </div>
 
                     {/* Intensidad */}
                     <div className="space-y-2">
                         <div className="flex items-center justify-between text-sm">
-                            <span className="font-medium text-slate-900">
-                                Intensidad
-                            </span>
-                            <span className="text-slate-500">
-                                {form.watch("intensity")}/5
-                            </span>
+                            <span className="font-medium text-slate-900">Intensidad</span>
+                            <span className="text-slate-500">{form.watch("intensity")}/5</span>
                         </div>
                         <Slider
-                            min={1}
-                            max={5}
-                            step={1}
+                            min={1} max={5} step={1}
                             value={[form.watch("intensity")]}
-                            onValueChange={([value]) =>
-                                form.setValue("intensity", value, { shouldValidate: true })
-                            }
+                            onValueChange={([value]) => form.setValue("intensity", value, { shouldValidate: true })}
                         />
                     </div>
 
-                    {/* Reflexión */}
-                    <div className="space-y-2">
+                    {/* Etiquetas emocionales clickeables — reemplaza el textarea */}
+                    <div className="space-y-3">
                         <div className="flex items-center justify-between text-sm">
-                            <span className="font-medium text-slate-900">
-                                ¿Quieres contar un poco más?
-                            </span>
-                            <span className="text-xs text-slate-500">
-                                Opcional, pero suma puntos extra
-                            </span>
+                            <span className="font-medium text-slate-900">¿Algo más que quieras marcar?</span>
+                            <span className="text-xs text-slate-400">Opcional · suma puntos extra</span>
                         </div>
-                        <Textarea
-                            placeholder="Ej: Hoy me sentí así porque..."
-                            rows={4}
-                            {...form.register("reflection")}
-                        />
+                        <div className="flex flex-wrap gap-2">
+                            {emotionTags.map((tag) => {
+                                const currentTags: string[] = form.watch("reflection")?.split(",").map(t => t.trim()).filter(Boolean) ?? []
+                                const isSelected = currentTags.includes(tag)
+                                return (
+                                    <button
+                                        key={tag}
+                                        type="button"
+                                        onClick={() => {
+                                            const updated = isSelected
+                                                ? currentTags.filter(t => t !== tag)
+                                                : [...currentTags, tag]
+                                            form.setValue("reflection", updated.join(", "))
+                                        }}
+                                        className={`rounded-full border px-3 py-1 text-xs font-medium transition-all
+                                            ${isSelected
+                                                ? "border-indigo-400 bg-indigo-50 text-indigo-700"
+                                                : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
+                                            }`}
+                                    >
+                                        {tag}
+                                    </button>
+                                )
+                            })}
+                        </div>
                     </div>
                 </CardContent>
 

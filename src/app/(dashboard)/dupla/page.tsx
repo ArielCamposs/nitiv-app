@@ -1,6 +1,7 @@
 import { getActiveAlerts } from "@/lib/utils/get-alerts"
 import { AlertsList } from "@/components/alerts/alerts-list"
 import { HelpRequestsPanel } from "@/components/help/HelpRequestsPanel"
+import { PulseActivatePanel } from "@/components/pulse/pulse-activate-panel"
 import { createClient } from "@/lib/supabase/server"
 import Link from "next/link"
 
@@ -12,9 +13,19 @@ export default async function DuplaPage() {
 
     const { data: profile } = await supabase
         .from("users")
-        .select("institution_id")
+        .select("id, institution_id")
         .eq("id", user!.id)
         .single()
+
+    // Pulso activo
+    const { data: pulseSession } = profile?.institution_id
+        ? await supabase
+            .from("pulse_sessions")
+            .select("id, week_start, week_end")
+            .eq("institution_id", profile.institution_id)
+            .eq("active", true)
+            .maybeSingle()
+        : { data: null }
 
     // Dupla ve: registros_negativos, discrepancia_docente, sin_registro
     const duplaTypes = [
@@ -45,6 +56,15 @@ export default async function DuplaPage() {
                         Ver mapa de clima emocional por curso →
                     </Link>
                 </div>
+
+                {/* Modo Pulso */}
+                {profile?.institution_id && (
+                    <PulseActivatePanel
+                        institutionId={profile.institution_id}
+                        userId={profile.id}
+                        activeSession={pulseSession ?? null}
+                    />
+                )}
 
                 <section className="space-y-3">
                     <h2 className="text-sm font-medium text-slate-500 uppercase tracking-wide">

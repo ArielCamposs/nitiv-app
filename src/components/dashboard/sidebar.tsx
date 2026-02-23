@@ -3,17 +3,149 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
-import { Home, LogOut, ShoppingBag, ThermometerSun, Users, LifeBuoy, Shield, BarChart3, FileText, MessageSquare } from "lucide-react"
+import {
+    Home, LogOut, ShoppingBag, ThermometerSun, Users, LifeBuoy,
+    Shield, BarChart3, FileText, MessageSquare, Activity, UserCircle,
+    Calendar, BookOpen, Library, Zap
+} from "lucide-react"
 import { useUnreadCount } from "@/hooks/useUnreadCount"
 import { DecBadge } from "@/components/dashboard/dec-badge"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
-
 import { NotificationBell } from "@/components/layout/notification-bell"
 
-export function SidebarContent({ userId, showBell = true }: { userId: string, showBell?: boolean }) {
+// ─── Tipos ────────────────────────────────────────────────────────────────────
+type NavItem = {
+    title: string
+    href: string
+    icon: React.ElementType
+    badge?: boolean
+    chatBadge?: boolean
+}
+
+type NavGroup = {
+    label: string
+    items: NavItem[]
+}
+
+// ─── Función principal de grupos ──────────────────────────────────────────────
+function getSidebarGroups(currentRole: string | null): NavGroup[] {
+    if (!currentRole) return []
+
+    // Resuelve el href del dashboard según rol
+    const homeHref: Record<string, string> = {
+        docente: "/docente",
+        estudiante: "/estudiante",
+        centro_alumnos: "/estudiante",
+        dupla: "/dupla",
+        convivencia: "/convivencia",
+        admin: "/admin",
+        director: "/director",
+        inspector: "/inspector",
+        utp: "/utp",
+    }
+    const dashHref = homeHref[currentRole] ?? "/"
+
+    const isStudent = currentRole === "estudiante" || currentRole === "centro_alumnos"
+    const isDocente = currentRole === "docente"
+    const isGestion = ["dupla", "convivencia", "director", "admin", "inspector", "utp"].includes(currentRole)
+    const hasDeepAccess = ["dupla", "convivencia", "director", "admin"].includes(currentRole)
+
+    // ── Bloque 1: Centro de Acción ─────────────────────────────────────────────
+    const centroAccion: NavItem[] = [
+        { title: "Inicio", href: dashHref, icon: Home },
+    ]
+
+    if (isStudent) {
+        centroAccion.push({ title: "Mi perfil", href: "/estudiante/perfil", icon: UserCircle })
+    }
+
+    if (isDocente) {
+        centroAccion.push({ title: "Clima de aula", href: "/docente/clima", icon: ThermometerSun })
+    }
+
+    // ── Bloque 2: Gestión de Casos ─────────────────────────────────────────────
+    const gestionCasos: NavItem[] = []
+
+    if (isDocente) {
+        gestionCasos.push({ title: "Estudiantes", href: "/docente/estudiantes", icon: Users })
+    }
+
+    if (isGestion || isDocente) {
+        // Resuelve la ruta de DEC según rol
+        const decHref =
+            currentRole === "dupla" || currentRole === "director"
+                ? "/dupla/dec"
+                : currentRole === "convivencia"
+                    ? "/convivencia/dec"
+                    : "/dec"
+
+        gestionCasos.push({ title: "Registro DEC", href: decHref, icon: Shield, badge: true })
+        gestionCasos.push({ title: "PAEC", href: "/paec", icon: LifeBuoy })
+    }
+
+    if (hasDeepAccess) {
+        gestionCasos.push({
+            title: "Clima emocional",
+            href: `/${currentRole}/heatmap`,
+            icon: Activity,
+        })
+        gestionCasos.push({ title: "Estudiantes", href: `/${currentRole}/estudiantes`, icon: Users })
+    }
+
+    if (currentRole === "director" || currentRole === "dupla") {
+        gestionCasos.push({
+            title: "Modo Pulso",
+            href: `/${currentRole}/pulso`,
+            icon: Zap,
+        })
+    }
+
+    // ── Bloque 3: Biblioteca y Comunidad ──────────────────────────────────────
+    const biblioteca: NavItem[] = []
+
+    biblioteca.push({ title: "Actividades", href: isStudent ? "/estudiante/actividades" : "/actividades", icon: Calendar })
+    biblioteca.push({ title: "Recursos", href: isStudent ? "/estudiante/recursos" : "/recursos", icon: BookOpen })
+    biblioteca.push({ title: "Biblioteca Nitiv", href: "/biblioteca", icon: Library })
+
+    if (isStudent) {
+        biblioteca.push({ title: "Tienda", href: "/estudiante/tienda", icon: ShoppingBag })
+    }
+
+    if (!isStudent) {
+        biblioteca.push({ title: "Chat", href: "/chat", icon: MessageSquare, chatBadge: true })
+    }
+
+    // ── Bloque 4: Análisis ────────────────────────────────────────────────────
+    const analisis: NavItem[] = []
+
+    if (isStudent) {
+        analisis.push({ title: "Mi historial", href: "/estudiante/historial", icon: BarChart3 })
+    }
+
+    if (hasDeepAccess || currentRole === "utp") {
+        analisis.push({ title: "Estadísticas", href: "/estadisticas", icon: BarChart3 })
+    }
+
+    if (!isStudent) {
+        analisis.push({ title: "Reportes", href: "/reportes", icon: FileText })
+    }
+
+    // ── Armar grupos (omitir si está vacío) ───────────────────────────────────
+    const groups: NavGroup[] = [
+        { label: "Centro de Acción", items: centroAccion },
+        ...(gestionCasos.length > 0 ? [{ label: "Gestión de Casos", items: gestionCasos }] : []),
+        { label: "Biblioteca y Comunidad", items: biblioteca },
+        ...(analisis.length > 0 ? [{ label: "Análisis", items: analisis }] : []),
+    ]
+
+    return groups
+}
+
+// ─── Componente principal ─────────────────────────────────────────────────────
+export function SidebarContent({ userId, showBell = true }: { userId: string; showBell?: boolean }) {
     const pathname = usePathname()
     const router = useRouter()
     const supabase = createClient()
@@ -21,26 +153,17 @@ export function SidebarContent({ userId, showBell = true }: { userId: string, sh
     const [loading, setLoading] = useState(true)
     const { totalUnread } = useUnreadCount(userId)
 
-    // Intenta deducir el rol inicial desde la URL para evitar parpadeos
-    // Esto funciona solo si el usuario está en su dashboard principal (ej: /docente/...)
-    // Si está en /dec, dependerá del fetch
-    // const initialRole = pathname.split('/')[1]
-
     useEffect(() => {
         const getRole = async () => {
             try {
                 const { data: { user } } = await supabase.auth.getUser()
                 if (!user) return
-
                 const { data: profile } = await supabase
                     .from("users")
                     .select("role")
                     .eq("id", user.id)
                     .single()
-
-                if (profile) {
-                    setRole(profile.role)
-                }
+                if (profile) setRole(profile.role)
             } catch (error) {
                 console.error("Error fetching role:", error)
             } finally {
@@ -50,157 +173,16 @@ export function SidebarContent({ userId, showBell = true }: { userId: string, sh
         getRole()
     }, [])
 
-    // Configuración de menús por rol
-    const getSidebarItems = (currentRole: string | null) => {
-        if (!currentRole) return []
-
-        const items = []
-
-        // 1. Dashboard Principal (Inicio)
-        let homeHref = "/"
-        switch (currentRole) {
-            case "docente": homeHref = "/docente"; break;
-            case "estudiante": homeHref = "/estudiante"; break;
-            case "centro_alumnos": homeHref = "/estudiante"; break; // Asumimos mismo dash
-            case "dupla": homeHref = "/dupla"; break;
-            case "convivencia": homeHref = "/convivencia"; break;
-            case "admin": homeHref = "/admin"; break;
-            case "director": homeHref = "/director"; break;
-            case "inspector": homeHref = "/inspector"; break;
-            case "utp": homeHref = "/utp"; break;
-            default: homeHref = "/"; break;
-        }
-
-        items.push({
-            title: "Inicio",
-            href: homeHref,
-            icon: Home,
-        })
-
-        // 2. Items específicos por rol
-        if (currentRole === "estudiante" || currentRole === "centro_alumnos") {
-            items.push(
-                {
-                    title: "Tienda",
-                    href: "/estudiante/tienda",
-                    icon: ShoppingBag,
-                },
-                {
-                    title: "Necesito ayuda",
-                    href: "/estudiante/ayuda",
-                    icon: LifeBuoy,
-                }
-            )
-        }
-
-        if (currentRole === "docente") {
-            items.push(
-                {
-                    title: "Clima de aula",
-                    href: "/docente/clima",
-                    icon: ThermometerSun,
-                },
-                {
-                    title: "Estudiantes",
-                    href: "/docente/estudiantes",
-                    icon: Users,
-                }
-            )
-        }
-
-        /* 
-           Nota: Para Dupla y Convivencia, "Inicio" apunta a su dashboard de alertas.
-           No necesitamos duplicar el item de alertas si ya es su home, 
-           pero si el usuario lo pidió explícitamente o para claridad, se puede dejar.
-           Sin embargo, el usuario pidió FIX de duplicados en /dec.
-           Mantendré la lógica simple: Inicio va al dashboard. 
-           Si el dashboard ES la vista de alertas, está cubierto.
-        */
-
-        // 3. Módulos transversales (como DEC, para todos menos estudiantes)
-        // DEC para Dupla y Director
-        if (currentRole === "dupla" || currentRole === "director") {
-            items.push({
-                title: "Registro DEC",
-                href: "/dupla/dec",
-                icon: Shield,
-                badge: true,
-            })
-        }
-        // DEC para Convivencia
-        else if (currentRole === "convivencia") {
-            items.push({
-                title: "Registro DEC",
-                href: "/convivencia/dec",
-                icon: Shield,
-                badge: true,
-            })
-        }
-        // DEC para otros roles (Docente, Inspector, UTP)
-        else if (currentRole !== "estudiante" && currentRole !== "centro_alumnos") {
-            items.push({
-                title: "Registro DEC",
-                href: "/dec",
-                icon: Shield,
-                badge: true,
-            })
-        }
-
-        // 4. Módulo PAEC (para todos menos estudiantes)
-        if (currentRole !== "estudiante" && currentRole !== "centro_alumnos") {
-            items.push({
-                title: "PAEC",
-                href: "/paec",
-                icon: LifeBuoy,
-            })
-        }
-
-        // 5. Heatmap Institucional (Director, Dupla, Convivencia)
-        if (["director", "dupla", "convivencia"].includes(currentRole)) {
-            items.push({
-                title: "Clima emocional",
-                href: `/${currentRole}/heatmap`,
-                icon: BarChart3,
-            })
-        }
-
-        // 6. Chat interno (Todos menos estudiantes)
-        if (currentRole !== "estudiante" && currentRole !== "centro_alumnos") {
-            items.push({
-                title: "Chat",
-                href: "/chat",
-                icon: MessageSquare,
-                chatBadge: true,
-            })
-        }
-
-        // 7. Reportes (Todos menos estudiantes)
-        if (currentRole !== "estudiante" && currentRole !== "centro_alumnos") {
-            items.push({
-                title: "Reportes",
-                href: "/reportes",
-                icon: FileText,
-            })
-        }
-
-        return items
-    }
-
-    const sidebarItems = getSidebarItems(role)
+    const sidebarGroups = getSidebarGroups(role)
 
     const handleLogout = async () => {
         const { error } = await supabase.auth.signOut()
-        if (error) {
-            toast.error("Error al cerrar sesión")
-            return
-        }
+        if (error) { toast.error("Error al cerrar sesión"); return }
         router.push("/login")
         router.refresh()
     }
 
     if (loading && !role) {
-        // Renderizar un esqueleto o nada mientras carga para evitar saltos incorrectos
-        // O renderizar un menú genérico seguro
         return (
             <div className="flex h-full flex-col p-6 border-r bg-slate-50/50">
                 <div className="mb-8 flex items-center gap-2 px-2">
@@ -212,38 +194,63 @@ export function SidebarContent({ userId, showBell = true }: { userId: string, sh
 
     return (
         <div className="flex h-full flex-col">
-            <div className="mb-8 flex items-center gap-2 px-2 justify-between">
+            {/* Logo + campana */}
+            <div className="mb-6 flex items-center gap-2 px-2 justify-between">
                 <span className="text-xl font-bold text-primary">Nitiv</span>
                 {showBell && <NotificationBell userId={userId} />}
             </div>
 
-            <nav className="flex-1 space-y-2">
-                {sidebarItems.map((item) => (
-                    <Link
-                        key={item.href}
-                        href={item.href}
-                        className={cn(
-                            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-slate-100 hover:text-slate-900",
-                            pathname === item.href || (pathname.startsWith(item.href + '/') && item.href !== '/')
-                                ? "bg-slate-100 text-slate-900"
-                                : "text-slate-500"
-                        )}
-                    >
-                        <item.icon className="h-4 w-4" />
-                        <span className="flex-1">{item.title}</span>
-                        {/* @ts-ignore */}
-                        {item.badge && <DecBadge />}
-                        {/* @ts-ignore */}
-                        {item.chatBadge && totalUnread > 0 && (
-                            <span className="min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
-                                {totalUnread > 9 ? "9+" : totalUnread}
-                            </span>
-                        )}
-                    </Link>
+            {/* Nav agrupado */}
+            <nav className="flex-1 space-y-5 overflow-y-auto pr-1">
+                {sidebarGroups.map((group) => (
+                    <div key={group.label}>
+                        {/* Etiqueta del grupo */}
+                        <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                            {group.label}
+                        </p>
+
+                        {/* Items del grupo */}
+                        <div className="space-y-0.5">
+                            {group.items.map((item) => (
+                                <Link
+                                    key={item.href}
+                                    href={item.href}
+                                    className={cn(
+                                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-slate-100 hover:text-slate-900",
+                                        pathname === item.href ||
+                                            (pathname.startsWith(item.href + "/") && item.href !== "/")
+                                            ? "bg-slate-100 text-slate-900"
+                                            : "text-slate-500"
+                                    )}
+                                >
+                                    <item.icon className="h-4 w-4 shrink-0" />
+                                    <span className="flex-1">{item.title}</span>
+                                    {/* @ts-ignore */}
+                                    {item.badge && <DecBadge />}
+                                    {/* @ts-ignore */}
+                                    {item.chatBadge && totalUnread > 0 && (
+                                        <span className="min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                                            {totalUnread > 9 ? "9+" : totalUnread}
+                                        </span>
+                                    )}
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
                 ))}
             </nav>
 
-            <div className="border-t pt-4">
+            {/* Zona inferior: emergencia + logout */}
+            <div className="border-t pt-4 space-y-1">
+                {(role === "estudiante" || role === "centro_alumnos") && (
+                    <Link
+                        href="/estudiante/ayuda"
+                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-rose-500 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                    >
+                        <LifeBuoy className="h-4 w-4" />
+                        <span>Necesito ayuda</span>
+                    </Link>
+                )}
                 <Button
                     variant="ghost"
                     className="w-full justify-start gap-3 text-slate-500 hover:text-red-600 hover:bg-red-50"

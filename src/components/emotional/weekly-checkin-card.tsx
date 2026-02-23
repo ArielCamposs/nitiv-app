@@ -29,10 +29,6 @@ const weeklySchema = z.object({
         .string()
         .min(10, "Escribe al menos 10 caracteres")
         .max(800, "Máximo 800 caracteres"),
-    principal_emocion: z.enum(
-        ["muy_bien", "bien", "neutral", "mal", "muy_mal"],
-        { message: "Selecciona una emoción principal" }
-    ),
 })
 
 type WeeklyFormValues = z.infer<typeof weeklySchema>
@@ -133,8 +129,8 @@ export function WeeklyCheckinCard() {
                 .insert({
                     institution_id: student.institution_id,
                     student_id: student.id,
-                    emotion: values.principal_emocion,
-                    intensity: 3, // valor neutro, aquí la emoción es lo principal
+                    emotion: "neutral",       // ← valor neutro, no se le pregunta al estudiante
+                    intensity: 3,             // valor neutro, aquí la emoción es lo principal
                     reflection: values.resumen.trim(),
                     type: "weekly",
                     week_number: weekNumber,
@@ -194,39 +190,6 @@ export function WeeklyCheckinCard() {
             </CardHeader>
             <form onSubmit={form.handleSubmit(onSubmit)}>
                 <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-900">
-                            Si tuvieras que elegir una emoción principal de la semana, ¿cuál
-                            sería?
-                        </label>
-                        <Select
-                            onValueChange={(value) =>
-                                form.setValue(
-                                    "principal_emocion",
-                                    value as WeeklyFormValues["principal_emocion"],
-                                    { shouldValidate: true }
-                                )
-                            }
-                            value={form.watch("principal_emocion")}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Selecciona una emoción" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="muy_bien">Muy bien</SelectItem>
-                                <SelectItem value="bien">Bien</SelectItem>
-                                <SelectItem value="neutral">Neutral</SelectItem>
-                                <SelectItem value="mal">Mal</SelectItem>
-                                <SelectItem value="muy_mal">Muy mal</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        {form.formState.errors.principal_emocion && (
-                            <p className="text-xs text-red-500">
-                                {form.formState.errors.principal_emocion.message}
-                            </p>
-                        )}
-                    </div>
-
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-slate-900">
                             Cuéntanos cómo fue tu semana

@@ -1,141 +1,118 @@
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
+import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import { EmotionHistoryChart } from "@/components/emotional/emotion-history-chart"
-import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 
-const EMOTION_SCORE: Record<string, number> = {
-    muy_mal: 1,
-    mal: 2,
-    neutral: 3,
-    bien: 4,
-    muy_bien: 5,
+const EMOTION_CONFIG: Record<string, { label: string; emoji: string; color: string }> = {
+    muy_bien: { label: "Muy bien", emoji: "😄", color: "bg-emerald-100 text-emerald-700" },
+    bien: { label: "Bien", emoji: "🙂", color: "bg-emerald-50 text-emerald-600" },
+    neutral: { label: "Neutral", emoji: "😐", color: "bg-slate-100 text-slate-600" },
+    mal: { label: "Mal", emoji: "😔", color: "bg-rose-100 text-rose-600" },
+    muy_mal: { label: "Muy mal", emoji: "😢", color: "bg-rose-200 text-rose-700" },
 }
 
-async function getHistorialData() {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-            cookies: {
-                getAll() { return cookieStore.getAll() },
-                setAll(cookiesToSet) {
-                    try {
-                        cookiesToSet.forEach(({ name, value, options }) =>
-                            cookieStore.set(name, value, options)
-                        )
-                    } catch { }
-                },
-            },
-        }
-    )
-
+export default async function HistorialPage() {
+    const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) redirect("/login")
 
     const { data: student } = await supabase
         .from("students")
-        .select("id, name")
+        .select("id")
         .eq("user_id", user.id)
         .maybeSingle()
 
     if (!student) redirect("/login")
 
-    // Últimos 28 días
-    const desde = new Date()
-    desde.setDate(desde.getDate() - 28)
-
     const { data: logs } = await supabase
         .from("emotional_logs")
-        .select("emotion, intensity, created_at")
+        .select("id, emotion, intensity, reflection, type, created_at")
         .eq("student_id", student.id)
-        .eq("type", "daily")
-        .gte("created_at", desde.toISOString())
-        .order("created_at", { ascending: true })
+        .order("created_at", { ascending: false })
+        .limit(50)
 
-    // Agrupar por semana (1 a 4)
-    const weeks: Record<string, { total: number; count: number; emotions: string[] }> = {
-        "Semana 1": { total: 0, count: 0, emotions: [] },
-        "Semana 2": { total: 0, count: 0, emotions: [] },
-        "Semana 3": { total: 0, count: 0, emotions: [] },
-        "Semana 4": { total: 0, count: 0, emotions: [] },
-    }
+    const total = logs?.length ?? 0
+    const conReflexion = logs?.filter(l => l.reflection).length ?? 0
 
-    const now = new Date()
+    // Emoción más frecuente
+    const emotionCount = (logs ?? []).reduce((acc: Record<string, number>, l: any) => {
+        acc[l.emotion] = (acc[l.emotion] ?? 0) + 1
+        return acc
+    }, {})
+    // Helper para type safe sort
+    const topEmotion = Object.entries(emotionCount).sort((a, b) => b[1] - a[1])[0]?.[0]
 
-    logs?.forEach((log) => {
-        const diffDays = Math.floor(
-            (now.getTime() - new Date(log.created_at).getTime()) / (1000 * 60 * 60 * 24)
-        )
-        const weekKey =
-            diffDays <= 7 ? "Semana 4" :
-                diffDays <= 14 ? "Semana 3" :
-                    diffDays <= 21 ? "Semana 2" :
-                        "Semana 1"
-
-        const score = EMOTION_SCORE[log.emotion] ?? 3
-        weeks[weekKey].total += score
-        weeks[weekKey].count += 1
-        weeks[weekKey].emotions.push(log.emotion)
-    })
-
-    const chartData = Object.entries(weeks).map(([semana, data]) => ({
-        semana,
-        promedio: data.count > 0
-            ? Math.round((data.total / data.count) * 10) / 10
-            : null,
-        registros: data.count,
-    }))
-
-    // Detectar tendencia: comparar semanas 3-4 vs 1-2
-    const promedioReciente =
-        [chartData[2].promedio ?? 0, chartData[3].promedio ?? 0]
-            .filter(Boolean)
-            .reduce((a, b) => a + b, 0) / 2
-
-    const promedioAnterior =
-        [chartData[0].promedio ?? 0, chartData[1].promedio ?? 0]
-            .filter(Boolean)
-            .reduce((a, b) => a + b, 0) / 2
-
-    const tendencia: "mejorando" | "empeorando" | "estable" =
-        promedioReciente > promedioAnterior + 0.3 ? "mejorando" :
-            promedioReciente < promedioAnterior - 0.3 ? "empeorando" :
-                "estable"
-
-    const totalRegistros = logs?.length ?? 0
-
-    return { student, chartData, tendencia, totalRegistros }
-}
-
-export default async function HistorialPage() {
-    const { student, chartData, tendencia, totalRegistros } = await getHistorialData()
+    // Promedio de intensidad
+    const avgIntensity = total > 0
+        ? ((logs ?? []).reduce((a, l) => a + (l.intensity ?? 3), 0) / total).toFixed(1)
+        : "—"
 
     return (
         <main className="min-h-screen bg-slate-50">
-            <div className="mx-auto max-w-3xl px-4 py-8 space-y-6">
+            <div className="mx-auto max-w-2xl px-4 py-8 space-y-6">
+                <h1 className="text-2xl font-semibold text-slate-900">Mi historial emocional</h1>
 
-                <div className="flex items-center gap-3">
-                    <Link
-                        href="/estudiante"
-                        className="text-slate-500 hover:text-slate-700 transition-colors"
-                    >
-                        <ArrowLeft className="w-5 h-5" />
-                    </Link>
-                    <h1 className="text-2xl font-semibold text-slate-900">
-                        Tu historial emocional
-                    </h1>
+                {/* Estadísticas */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                        { label: "Registros totales", value: total },
+                        { label: "Con reflexión", value: conReflexion },
+                        { label: "Intensidad promedio", value: avgIntensity },
+                        { label: "Emoción frecuente", value: topEmotion ? EMOTION_CONFIG[topEmotion]?.emoji + " " + EMOTION_CONFIG[topEmotion]?.label : "—" },
+                    ].map((stat) => (
+                        <Card key={stat.label}>
+                            <CardContent className="pt-4 text-center">
+                                <p className="text-xl font-bold text-indigo-600">{stat.value}</p>
+                                <p className="text-xs text-slate-500 mt-1">{stat.label}</p>
+                            </CardContent>
+                        </Card>
+                    ))}
                 </div>
 
-                <EmotionHistoryChart
-                    chartData={chartData}
-                    tendencia={tendencia}
-                    totalRegistros={totalRegistros}
-                    nombre={student.name}
-                />
-
+                {/* Lista de registros */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">Registros recientes</CardTitle>
+                    </CardHeader>
+                    <CardContent className="divide-y">
+                        {(logs ?? []).length === 0 && (
+                            <p className="text-sm text-slate-500 py-4 text-center">
+                                Aún no tienes registros emocionales.
+                            </p>
+                        )}
+                        {(logs ?? []).map((log: any) => {
+                            const cfg = EMOTION_CONFIG[log.emotion] ?? EMOTION_CONFIG.neutral
+                            return (
+                                <div key={log.id} className="flex items-start gap-3 py-3">
+                                    <span className="text-2xl">{cfg.emoji}</span>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${cfg.color}`}>
+                                                {cfg.label}
+                                            </span>
+                                            <Badge variant="outline" className="text-xs capitalize">
+                                                {log.type === "daily" ? "Diario" : "Semanal"}
+                                            </Badge>
+                                            <span className="text-xs text-slate-400">
+                                                Intensidad: {log.intensity}/5
+                                            </span>
+                                        </div>
+                                        {log.reflection && (
+                                            <p className="text-xs text-slate-500 mt-1 truncate">
+                                                {log.reflection}
+                                            </p>
+                                        )}
+                                        <p className="text-xs text-slate-400 mt-0.5">
+                                            {new Date(log.created_at).toLocaleDateString("es-CL", {
+                                                weekday: "long", day: "numeric", month: "long"
+                                            })}
+                                        </p>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </CardContent>
+                </Card>
             </div>
         </main>
     )
