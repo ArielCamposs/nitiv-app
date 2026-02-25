@@ -1,23 +1,36 @@
-import { Sidebar } from "@/components/dashboard/sidebar"
-export const dynamic = "force-dynamic"
-import { MobileNav } from "@/components/dashboard/mobile-nav"
-import { NotificationBell } from "@/components/layout/notification-bell"
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
+import { Sidebar } from "@/components/dashboard/sidebar"
+import { AdminSidebar } from "@/components/dashboard/admin-sidebar"
+import { MobileNav } from "@/components/dashboard/mobile-nav"
+import { NotificationBell } from "@/components/layout/notification-bell"
 
-export default async function DashboardLayout({
-    children,
-}: {
-    children: React.ReactNode
-}) {
+export const dynamic = "force-dynamic"
+
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) redirect("/login")
 
+    // Detectar si es admin para usar su sidebar propio
+    const { data: profile } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
+        .single()
+
+    const isAdmin = profile?.role === "admin"
+
     return (
         <div className="min-h-screen bg-white">
-            <Sidebar userId={user.id} />
+            {/* Sidebar condicional */}
+            {isAdmin
+                ? <AdminSidebar userId={user.id} />
+                : <Sidebar userId={user.id} />
+            }
+
+            {/* Navbar mobile */}
             <div className="fixed left-0 top-0 z-10 flex w-full items-center border-b bg-white px-4 py-2 md:hidden justify-between">
                 <div className="flex items-center">
                     <MobileNav userId={user.id} />
@@ -26,10 +39,6 @@ export default async function DashboardLayout({
                 <NotificationBell userId={user.id} />
             </div>
 
-            {/* 
-                Left margin matches sidebar width on desktop.
-                On mobile, add top padding to account for fixed navbar.
-            */}
             <main className="min-h-screen pt-14 md:ml-64 md:pt-0">
                 {children}
             </main>

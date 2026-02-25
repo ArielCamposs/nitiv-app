@@ -13,7 +13,7 @@ export default async function DirectorPulsoPage() {
         .eq("id", user.id)
         .single()
 
-    if (!profile || !["director", "dupla"].includes(profile.role)) redirect("/dashboard")
+    if (!profile || !["director", "dupla", "admin"].includes(profile.role)) redirect("/")
 
     const { data: pulseSession } = await supabase
         .from("pulse_sessions")
@@ -68,8 +68,8 @@ export default async function DirectorPulsoPage() {
                                         </p>
                                     </div>
                                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${s.active
-                                            ? "bg-indigo-100 text-indigo-700"
-                                            : "bg-slate-100 text-slate-500"
+                                        ? "bg-indigo-100 text-indigo-700"
+                                        : "bg-slate-100 text-slate-500"
                                         }`}>
                                         {s.active ? "Activa" : "Cerrada"}
                                     </span>

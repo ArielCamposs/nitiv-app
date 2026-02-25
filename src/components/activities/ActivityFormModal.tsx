@@ -6,6 +6,9 @@ import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
+import { createNotifications, getAllUserIds } from "@/lib/notifications"
+import { format } from "date-fns"
+import { es } from "date-fns/locale"
 import { X, MapPin, Paperclip } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -135,6 +138,19 @@ export function ActivityFormModal({
                 .select("*, activity_courses(course_id, courses(id, name, section))")
                 .eq("id", activityId)
                 .single()
+
+            if (!isEdit && saved) {
+                const recipients = await getAllUserIds(institutionId, userId)
+                await createNotifications({
+                    institutionId,
+                    recipientIds: recipients,
+                    type: "actividad_nueva",
+                    title: `Nueva actividad: ${saved.title}`,
+                    message: `${format(new Date(saved.start_datetime), "dd MMM yyyy", { locale: es })} · ${saved.location ?? "Sin ubicación"}`,
+                    relatedId: saved.id,
+                    relatedUrl: "/actividades",
+                })
+            }
 
             toast.success(isEdit ? "Actividad actualizada." : "Actividad publicada.")
             onSaved(saved)

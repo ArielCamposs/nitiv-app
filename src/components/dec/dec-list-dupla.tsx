@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
+import { logAdminAction } from "@/lib/admin/log-action"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -27,6 +28,7 @@ import {
     DialogTrigger,
 } from "../ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
+import { DecDeleteButton } from "@/components/dec/dec-delete-button"
 
 type DecCase = {
     id: string
@@ -170,8 +172,8 @@ export function DecListDupla({ cases, currentUserId, userRole }: Props) {
                                             </div>
                                         </Link>
 
-                                        {/* Estado del caso + Resolver */}
-                                        <div className="flex items-center gap-3">
+                                        {/* Estado del caso + acciones */}
+                                        <div className="flex items-center gap-2 flex-wrap justify-end">
                                             <Badge
                                                 className={
                                                     dec.resolved
@@ -183,12 +185,11 @@ export function DecListDupla({ cases, currentUserId, userRole }: Props) {
                                                 {dec.resolved ? "Resuelto" : "Seguimiento"}
                                             </Badge>
 
-                                            {!dec.resolved && ["dupla", "convivencia"].includes(userRole) && (
+                                            {/* Resolver — dupla, convivencia Y admin */}
+                                            {!dec.resolved && ["dupla", "convivencia", "admin"].includes(userRole) && (
                                                 <Dialog>
                                                     <DialogTrigger asChild>
-                                                        <Button size="sm" variant="outline">
-                                                            Resolver
-                                                        </Button>
+                                                        <Button size="sm" variant="outline">Resolver</Button>
                                                     </DialogTrigger>
                                                     <DialogContent onClick={(e: React.MouseEvent) => e.stopPropagation()}>
                                                         <DialogHeader>
@@ -237,8 +238,16 @@ export function DecListDupla({ cases, currentUserId, userRole }: Props) {
 
                                                                         if (error) {
                                                                             toast.error("Error al resolver el caso.")
-                                                                            console.error(error)
                                                                         } else {
+                                                                            if (userRole === "admin") {
+                                                                                await logAdminAction({
+                                                                                    action: "resolve_incident",
+                                                                                    entityType: "incident",
+                                                                                    entityId: dec.id,
+                                                                                    entityDescription: `${dec.folio} · ${dec.students?.last_name}, ${dec.students?.name}`,
+                                                                                    afterData: { resolution_notes: resolutionNotes },
+                                                                                })
+                                                                            }
                                                                             toast.success("Caso resuelto correctamente.")
                                                                             setResolvingId(null)
                                                                             setResolutionNotes("")
@@ -254,6 +263,20 @@ export function DecListDupla({ cases, currentUserId, userRole }: Props) {
                                                         </div>
                                                     </DialogContent>
                                                 </Dialog>
+                                            )}
+
+                                            {/* Editar + Eliminar — solo admin */}
+                                            {userRole === "admin" && (
+                                                <>
+                                                    <Link href={`/dec/${dec.id}/editar`}>
+                                                        <Button size="sm" variant="outline">Editar</Button>
+                                                    </Link>
+                                                    <DecDeleteButton
+                                                        incidentId={dec.id}
+                                                        folio={dec.folio}
+                                                        size="sm"
+                                                    />
+                                                </>
                                             )}
                                         </div>
                                     </div>

@@ -1,9 +1,9 @@
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
-import { StudentsClient } from "@/components/admin/StudentsClient"
+import { UsersClient } from "@/components/admin/UsersClient"
 
-export default async function AdminEstudiantesPage() {
+export default async function AdminUsuariosPage() {
     const cookieStore = await cookies()
     const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -23,25 +23,17 @@ export default async function AdminEstudiantesPage() {
         .from("users").select("role, institution_id").eq("id", user.id).single()
     if (profile?.role !== "admin") redirect("/")
 
-    const [{ data: students }, { data: courses }] = await Promise.all([
-        supabase
-            .from("students")
-            .select("id, name, last_name, rut, birthdate, guardian_name, guardian_phone, guardian_email, course_id, active, created_at")
-            .eq("institution_id", profile.institution_id)
-            .order("last_name"),
-        supabase
-            .from("courses")
-            .select("id, name, level, section")
-            .eq("institution_id", profile.institution_id)
-            .eq("active", true)
-            .order("name"),
-    ])
+    const { data: users } = await supabase
+        .from("users")
+        .select("id, name, last_name, email, role, phone, active, created_at")
+        .eq("institution_id", profile.institution_id)
+        .neq("role", "admin")
+        .order("name")
 
     return (
         <div className="px-6 py-8 max-w-5xl mx-auto">
-            <StudentsClient
-                students={students ?? []}
-                courses={courses ?? []}
+            <UsersClient
+                users={users ?? []}
                 institutionId={profile.institution_id}
             />
         </div>

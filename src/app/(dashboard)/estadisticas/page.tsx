@@ -22,8 +22,8 @@ export default async function EstadisticasPage() {
 
     if (!profile) redirect("/login")
 
-    const allowedRoles = ["director", "dupla"]
-    if (!allowedRoles.includes(profile.role)) redirect("/dashboard")
+    const allowedRoles = ["director", "dupla", "admin", "utp"]
+    if (!allowedRoles.includes(profile.role)) redirect("/")
 
     return (
         <main className="min-h-screen bg-slate-50">

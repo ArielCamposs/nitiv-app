@@ -73,7 +73,9 @@ export default function ChatPage() {
             const { data: users } = await supabase
                 .from("users").select("id, name, last_name, role")
                 .not("role", "in", `(${BLOCKED_ROLES.join(",")})`)
-                .neq("id", user.id).eq("active", true).order("name")
+                .eq("institution_id", profile.institution_id)
+                .neq("id", user.id)
+                .order("name")
 
             const { data: convs } = await supabase
                 .from("conversations").select("id, user_a, user_b")

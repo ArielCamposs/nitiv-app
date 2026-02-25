@@ -20,7 +20,7 @@ export default async function PaecDetailPage({
         .eq("id", user.id)
         .maybeSingle()
 
-    if (!profile || profile.role === "estudiante") redirect("/dashboard")
+    if (!profile || profile.role === "estudiante") redirect("/estudiante")
 
     const { data: paec } = await supabase
         .from("paec")

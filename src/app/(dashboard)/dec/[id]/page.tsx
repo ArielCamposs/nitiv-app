@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
+import Link from "next/link"
+import { Pencil } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import {
     Card,
@@ -7,7 +9,9 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { AcuseRecibo } from "@/components/dec/acuse-recibo"
+import { DecDeleteButton } from "@/components/dec/dec-delete-button"
 
 const SEVERITY_META = {
     moderada: { label: "Etapa 2 — Moderada", color: "bg-amber-100 text-amber-700" },
@@ -88,7 +92,12 @@ async function getDecDetail(id: string) {
         (r: any) => r.recipient_id === user.id && !r.seen
     ) : null
 
-    return { incident, recipients: recipients ?? [], myRecipientId: myRecipient?.id ?? null }
+    // Detectar si el usuario actual es admin
+    const isAdmin = user
+        ? (await supabase.from("users").select("role").eq("id", user.id).single()).data?.role === "admin"
+        : false
+
+    return { incident, recipients: recipients ?? [], myRecipientId: myRecipient?.id ?? null, isAdmin }
 }
 
 function SectionBlock({
@@ -151,9 +160,7 @@ export default async function DecDetailPage({
                 <div className="flex items-start justify-between gap-4">
                     <div>
                         <div className="flex items-center gap-2">
-                            <h1 className="text-2xl font-semibold text-slate-900">
-                                Ficha DEC
-                            </h1>
+                            <h1 className="text-2xl font-semibold text-slate-900">Ficha DEC</h1>
                             {incident.folio && (
                                 <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-slate-500">
                                     {incident.folio}
@@ -171,9 +178,29 @@ export default async function DecDetailPage({
                             })}
                         </p>
                     </div>
-                    <Badge className={`shrink-0 text-xs ${severity?.color}`}>
-                        {severity?.label ?? incident.severity}
-                    </Badge>
+
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                        <Badge className={`text-xs ${severity?.color}`}>
+                            {severity?.label ?? incident.severity}
+                        </Badge>
+
+                        {/* Acciones admin */}
+                        {data.isAdmin && (
+                            <>
+                                <Link href={`/dec/${incident.id}/editar`}>
+                                    <Button size="sm" variant="outline" className="gap-1">
+                                        <Pencil className="h-3.5 w-3.5" />
+                                        Editar
+                                    </Button>
+                                </Link>
+                                <DecDeleteButton
+                                    incidentId={incident.id}
+                                    folio={incident.folio}
+                                    redirectTo="/admin/dec"
+                                />
+                            </>
+                        )}
+                    </div>
                 </div>
 
                 {/* Sección 1: Identificación */}

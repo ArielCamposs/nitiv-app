@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
-import { createNotificationAction } from "@/actions/notifications"
+import { createNotifications, getUserIdsByRoles } from "@/lib/notifications"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -179,27 +179,31 @@ export function DecForm({ students, notifiables = [], teacherId, institutionId }
                     console.error(recipientsError)
                     // No bloquear el flujo, el DEC ya fue guardado
                 } else {
-                    // Notificar a los destinatarios
+                    // Notificar a directivos en bulk
                     const student = students.find((s) => s.id === studentId)
                     const studentName = student ? `${student.name} ${student.last_name}` : "Estudiante"
+                    const course = student?.courses?.name ?? "Sin curso"
 
-                    // Ejecutar notificaciones en segundo plano (no await blocking user flow completely if sluggish, 
-                    // though Server Actions are awaited. We can just use Promise.all)
-                    const notificationPromises = recipients.map(recipientId =>
-                        createNotificationAction({
-                            institutionId,
-                            recipientId,
-                            type: "dec_created",
-                            title: "Nuevo DEC registrado",
-                            message: `Se registró un DEC para ${studentName}. Severidad: ${severity}`,
-                            relatedId: incident.id,
-                            relatedUrl: `/dec/${incident.id}`, // ToDo: Verify this route
-                        }).catch(e => console.error("Error sending notification:", e))
-                    )
+                    const { data: reporterObj } = await supabase
+                        .from("users")
+                        .select("name, last_name")
+                        .eq("id", teacherId)
+                        .single()
+                    const reporterName = reporterObj ? `${reporterObj.name} ${reporterObj.last_name}` : "Docente"
 
-                    // We can await them to ensure they are sent before redirecting, or let them run.
-                    // Vercel serverless functions might kill background tasks if not awaited.
-                    await Promise.all(notificationPromises)
+                    const roleRecipients = await getUserIdsByRoles(institutionId, ["director", "dupla", "convivencia"], teacherId)
+                    // Merge with the manually selected recipients to avoid missing anyone
+                    const finalRecipients = [...new Set([...recipients, ...roleRecipients])]
+
+                    await createNotifications({
+                        institutionId,
+                        recipientIds: finalRecipients,
+                        type: "dec_nuevo",
+                        title: "Nuevo caso DEC",
+                        message: `${studentName} · ${course} — reportado por ${reporterName}`,
+                        relatedId: incident.id,
+                        relatedUrl: `/dec/${incident.id}`,
+                    })
                 }
             }
 
