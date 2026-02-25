@@ -125,7 +125,7 @@ export function NotificationBell({ userId }: { userId: string }) {
 
             {/* Panel desplegable */}
             {open && (
-                <div className="absolute right-0 top-9 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden">
+                <div className="absolute right-0 sm:right-0 md:left-0 md:right-auto top-10 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden">
                     {/* Header */}
                     <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
                         <div className="flex items-center gap-2">
