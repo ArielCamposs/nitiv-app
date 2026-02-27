@@ -75,6 +75,7 @@ export default async function EstudianteActividadesPage() {
                     activities={activities}
                     courses={[]}
                     userId={profile.id}
+                    studentId={profile.id}
                     userRole={profile.role}
                     institutionId={profile.institution_id}
                     canManage={false}

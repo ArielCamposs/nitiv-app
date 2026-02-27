@@ -26,7 +26,7 @@ export default async function HistorialPage() {
 
     const { data: logs } = await supabase
         .from("emotional_logs")
-        .select("id, emotion, intensity, reflection, type, created_at")
+        .select("id, emotion, stress_level, anxiety_level, reflection, type, created_at")
         .eq("student_id", student.id)
         .order("created_at", { ascending: false })
         .limit(50)
@@ -42,9 +42,12 @@ export default async function HistorialPage() {
     // Helper para type safe sort
     const topEmotion = Object.entries(emotionCount).sort((a, b) => b[1] - a[1])[0]?.[0]
 
-    // Promedio de intensidad
-    const avgIntensity = total > 0
-        ? ((logs ?? []).reduce((a, l) => a + (l.intensity ?? 3), 0) / total).toFixed(1)
+    const avgStress = total > 0
+        ? ((logs ?? []).reduce((a, l) => a + (l.stress_level ?? 3), 0) / total).toFixed(1)
+        : "—"
+
+    const avgAnxiety = total > 0
+        ? ((logs ?? []).reduce((a, l) => a + (l.anxiety_level ?? 3), 0) / total).toFixed(1)
         : "—"
 
     return (
@@ -57,7 +60,7 @@ export default async function HistorialPage() {
                     {[
                         { label: "Registros totales", value: total },
                         { label: "Con reflexión", value: conReflexion },
-                        { label: "Intensidad promedio", value: avgIntensity },
+                        { label: "Estrés / Ansiedad prom.", value: avgStress !== "—" && avgAnxiety !== "—" ? `${avgStress} / ${avgAnxiety}` : "—" },
                         { label: "Emoción frecuente", value: topEmotion ? EMOTION_CONFIG[topEmotion]?.emoji + " " + EMOTION_CONFIG[topEmotion]?.label : "—" },
                     ].map((stat) => (
                         <Card key={stat.label}>
@@ -94,7 +97,7 @@ export default async function HistorialPage() {
                                                 {log.type === "daily" ? "Diario" : "Semanal"}
                                             </Badge>
                                             <span className="text-xs text-slate-400">
-                                                Intensidad: {log.intensity}/5
+                                                😰 Estrés: {log.stress_level ?? "—"}/5 · 😟 Ansiedad: {log.anxiety_level ?? "—"}/5
                                             </span>
                                         </div>
                                         {log.reflection && (

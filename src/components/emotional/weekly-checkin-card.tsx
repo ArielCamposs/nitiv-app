@@ -16,13 +16,6 @@ import {
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
 
 const weeklySchema = z.object({
     resumen: z
@@ -33,12 +26,15 @@ const weeklySchema = z.object({
 
 type WeeklyFormValues = z.infer<typeof weeklySchema>
 
-export function WeeklyCheckinCard() {
-    const supabase = createClient()
-    const [loading, setLoading] = useState(false)
-    const [alreadyDone, setAlreadyDone] = useState(false)
+const LEVEL_LABELS: Record<number, string> = {
+    1: "Muy poco",
+    2: "Poco",
+    3: "Moderado",
+    4: "Alto",
+    5: "Muy alto",
+}
 
-    // calcular semana actual
+function getWeekNumber() {
     const now = new Date()
     const year = now.getFullYear()
     const oneJan = new Date(year, 0, 1)
@@ -46,22 +42,34 @@ export function WeeklyCheckinCard() {
         (now.getTime() - oneJan.getTime()) / (24 * 60 * 60 * 1000)
     )
     const weekNumber = Math.ceil((now.getDay() + 1 + numberOfDays) / 7)
+    return { weekNumber, year }
+}
+
+export function WeeklyCheckinCard() {
+    const supabase = createClient()
+    const [loading, setLoading] = useState(false)
+    const [alreadyDone, setAlreadyDone] = useState(false)
+    const [stressValue, setStressValue] = useState(3)
+    const [anxietyValue, setAnxietyValue] = useState(3)
+
+    const stressLevel = Math.round(stressValue)
+    const anxietyLevel = Math.round(anxietyValue)
+
+    const { weekNumber, year } = getWeekNumber()
 
     const form = useForm<WeeklyFormValues>({
         resolver: zodResolver(weeklySchema),
     })
 
-    // Ver si ya existe un registro semanal
+    // Verificar si ya existe registro semanal
     useEffect(() => {
         const checkExisting = async () => {
-            const {
-                data: { user },
-            } = await supabase.auth.getUser()
+            const { data: { user } } = await supabase.auth.getUser()
             if (!user) return
 
             const { data: student } = await supabase
                 .from("students")
-                .select("id, institution_id")
+                .select("id")
                 .eq("user_id", user.id)
                 .maybeSingle()
 
@@ -76,9 +84,7 @@ export function WeeklyCheckinCard() {
                 .eq("year", year)
                 .maybeSingle()
 
-            if (!error && existing) {
-                setAlreadyDone(true)
-            }
+            if (!error && existing) setAlreadyDone(true)
         }
 
         void checkExisting()
@@ -88,10 +94,7 @@ export function WeeklyCheckinCard() {
         try {
             setLoading(true)
 
-            const {
-                data: { user },
-                error: userError,
-            } = await supabase.auth.getUser()
+            const { data: { user }, error: userError } = await supabase.auth.getUser()
             if (userError || !user) {
                 toast.error("No se pudo obtener el usuario")
                 return
@@ -108,7 +111,7 @@ export function WeeklyCheckinCard() {
                 return
             }
 
-            // seguridad extra: re-verificar que no exista otro semanal
+            // Seguridad: re-verificar que no exista otro semanal
             const { data: existing } = await supabase
                 .from("emotional_logs")
                 .select("id")
@@ -129,8 +132,9 @@ export function WeeklyCheckinCard() {
                 .insert({
                     institution_id: student.institution_id,
                     student_id: student.id,
-                    emotion: "neutral",       // ← valor neutro, no se le pregunta al estudiante
-                    intensity: 3,             // valor neutro, aquí la emoción es lo principal
+                    emotion: "neutral",           // fijo en semanal, la reflexión es lo principal
+                    stress_level: stressLevel,
+                    anxiety_level: anxietyLevel,
                     reflection: values.resumen.trim(),
                     type: "weekly",
                     week_number: weekNumber,
@@ -143,19 +147,15 @@ export function WeeklyCheckinCard() {
                 return
             }
 
-            // Sumar puntos por check-in semanal
-            const { error: pointsError } = await supabase.from("points").insert({
+            // Sumar puntos
+            await supabase.from("points").insert({
                 institution_id: student.institution_id,
                 student_id: student.id,
                 amount: 25,
                 reason: "weekly_checkin",
             })
 
-            if (pointsError) {
-                console.error(pointsError)
-            }
-
-            toast.success("Check-in semanal registrado. Gracias por tu reflexión.")
+            toast.success("Check-in semanal registrado. ¡Gracias por tu reflexión! 🎉")
             setAlreadyDone(true)
         } catch (e) {
             console.error(e)
@@ -169,7 +169,7 @@ export function WeeklyCheckinCard() {
         return (
             <Card className="border-dashed border-amber-300 bg-amber-50/60">
                 <CardHeader>
-                    <CardTitle>Check-in semanal completado</CardTitle>
+                    <CardTitle>Check-in semanal completado ✅</CardTitle>
                     <CardDescription>
                         Ya registraste tu reflexión de esta semana. Podrás hacer uno nuevo
                         la próxima semana.
@@ -188,10 +188,12 @@ export function WeeklyCheckinCard() {
                     sobre tu semana.
                 </CardDescription>
             </CardHeader>
+
             <form onSubmit={form.handleSubmit(onSubmit)}>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-6">
+                    {/* Reflexión escrita */}
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-900">
+                        <label className="text-sm font-medium text-slate-700">
                             Cuéntanos cómo fue tu semana
                         </label>
                         <Textarea
@@ -204,8 +206,57 @@ export function WeeklyCheckinCard() {
                                 {form.formState.errors.resumen.message}
                             </p>
                         )}
+                        <p className="text-xs text-slate-400 text-right">
+                            {form.watch("resumen")?.length ?? 0}/800
+                        </p>
                     </div>
+
+                    {/* Nivel de Estrés */}
+                    <div className="space-y-2 px-1">
+                        <label className="text-sm font-medium text-slate-700">
+                            ¿Cómo fue tu nivel de estrés esta semana?{" "}
+                            <span className="font-bold text-orange-500">
+                                {LEVEL_LABELS[stressLevel]}
+                            </span>
+                        </label>
+                        <input
+                            type="range"
+                            min={1} max={5} step={0.01}
+                            value={stressValue}
+                            onChange={(e) => setStressValue(Number(e.target.value))}
+                            className="w-full h-2 rounded-full appearance-none cursor-pointer touch-none"
+                            style={{ accentColor: "#f97316" }}
+                        />
+                        <div className="flex justify-between text-xs text-slate-400">
+                            <span>Muy poco</span>
+                            <span>Muy alto</span>
+                        </div>
+                    </div>
+
+                    {/* Nivel de Ansiedad */}
+                    <div className="space-y-2 px-1">
+                        <label className="text-sm font-medium text-slate-700">
+                            ¿Cómo fue tu nivel de ansiedad esta semana?{" "}
+                            <span className="font-bold text-orange-500">
+                                {LEVEL_LABELS[anxietyLevel]}
+                            </span>
+                        </label>
+                        <input
+                            type="range"
+                            min={1} max={5} step={0.01}
+                            value={anxietyValue}
+                            onChange={(e) => setAnxietyValue(Number(e.target.value))}
+                            className="w-full h-2 rounded-full appearance-none cursor-pointer touch-none"
+                            style={{ accentColor: "#f97316" }}
+                        />
+                        <div className="flex justify-between text-xs text-slate-400">
+                            <span>Muy poco</span>
+                            <span>Muy alto</span>
+                        </div>
+                    </div>
+
                 </CardContent>
+
                 <CardFooter className="flex justify-end">
                     <Button type="submit" disabled={loading}>
                         {loading ? "Guardando..." : "Guardar check-in semanal"}

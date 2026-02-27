@@ -62,7 +62,7 @@ export default async function ActividadesPage() {
     return (
         <main className="min-h-screen bg-slate-50">
             <div className="mx-auto max-w-4xl px-4 py-8">
-                <ActivitiesClient {...data} />
+                <ActivitiesClient {...data} studentId={null} />
             </div>
         </main>
     )
