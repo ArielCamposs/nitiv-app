@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { DecListDupla } from "@/components/dec/dec-list-dupla"
+import { MarkDecSeen } from "@/components/dec/mark-dec-seen"
 
 async function getDecCasesForAdmin() {
     const supabase = await createClient()
@@ -60,6 +61,7 @@ export default async function AdminDecPage() {
 
     return (
         <main className="min-h-screen bg-slate-50">
+            <MarkDecSeen />
             <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
                 <div className="flex items-center justify-between">
                     <div>

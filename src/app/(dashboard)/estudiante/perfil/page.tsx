@@ -108,6 +108,22 @@ export default async function PerfilEstudiantePage() {
         .eq("student_id", student.id)
         .order("incident_date", { ascending: false })
 
+    // Convivencia records the student was involved in
+    const { data: convivenciaLinks } = await supabase
+        .from("convivencia_record_students")
+        .select(`
+            convivencia_records (
+                id, type, severity, location, description,
+                actions_taken, resolved, resolution_notes, incident_date
+            )
+        `)
+        .eq("student_id", student.id)
+
+    const convivenciaRecords = (convivenciaLinks ?? [])
+        .map((l: any) => l.convivencia_records)
+        .filter(Boolean)
+        .sort((a: any, b: any) => new Date(b.incident_date).getTime() - new Date(a.incident_date).getTime())
+
     const age = student.birthdate
         ? Math.floor((Date.now() - new Date(student.birthdate).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
         : null
@@ -165,11 +181,12 @@ export default async function PerfilEstudiantePage() {
 
                 {/* Contenido Separado en Pestañas */}
                 <Tabs defaultValue="perfil" className="w-full">
-                    <TabsList className="grid w-full grid-cols-4">
+                    <TabsList className="grid w-full grid-cols-5">
                         <TabsTrigger value="perfil">Perfil</TabsTrigger>
                         <TabsTrigger value="emocional">Emocional</TabsTrigger>
                         <TabsTrigger value="paec">PAEC</TabsTrigger>
                         <TabsTrigger value="dec">Historial DEC</TabsTrigger>
+                        <TabsTrigger value="convivencia">Convivencia</TabsTrigger>
                     </TabsList>
 
                     {/* VISTA 1: PERFIL */}
@@ -358,8 +375,8 @@ export default async function PerfilEstudiantePage() {
                                                     <div className="flex items-center gap-2 mb-1">
                                                         <span className="font-semibold text-sm text-slate-900">{dec.folio}</span>
                                                         <Badge variant="outline" className={`text-[10px] ${dec.severity === "moderada" ? "bg-amber-100 text-amber-700 border-amber-200" :
-                                                                dec.severity === "severa" ? "bg-rose-100 text-rose-700 border-rose-200" :
-                                                                    "bg-slate-100 text-slate-700"
+                                                            dec.severity === "severa" ? "bg-rose-100 text-rose-700 border-rose-200" :
+                                                                "bg-slate-100 text-slate-700"
                                                             }`}>
                                                             {dec.severity === "moderada" ? "Etapa 2 — Moderada" :
                                                                 dec.severity === "severa" ? "Etapa 3 — Severa" :
@@ -386,6 +403,73 @@ export default async function PerfilEstudiantePage() {
                                                 </div>
                                             </div>
                                         ))}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    {/* VISTA 5: CONVIVENCIA */}
+                    <TabsContent value="convivencia" className="mt-6 space-y-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-base">Mis Registros de Convivencia</CardTitle>
+                                <CardDescription>Casos de convivencia escolar en que has sido involucrado</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {convivenciaRecords.length === 0 ? (
+                                    <p className="text-sm text-slate-400 py-4 text-center">
+                                        No tienes registros de convivencia asociados.
+                                    </p>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {convivenciaRecords.map((rec: any) => {
+                                            const SEVERITY_COLORS: Record<string, string> = {
+                                                leve: "bg-yellow-100 text-yellow-700",
+                                                moderada: "bg-orange-100 text-orange-700",
+                                                grave: "bg-red-100 text-red-700",
+                                            }
+                                            const TYPE_LABELS: Record<string, string> = {
+                                                pelea: "Pelea", fuga: "Fuga / Escapada",
+                                                daño_material: "Daño Material", amenaza: "Amenaza",
+                                                acoso: "Acoso", consumo: "Consumo de Sustancias",
+                                                conflicto_grupal: "Conflicto Grupal", otro: "Otro",
+                                            }
+                                            return (
+                                                <div key={rec.id} className="border rounded-xl p-4 space-y-2">
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <span className="font-semibold text-sm text-slate-900">
+                                                                {TYPE_LABELS[rec.type] ?? rec.type}
+                                                            </span>
+                                                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${SEVERITY_COLORS[rec.severity] ?? ""}`}>
+                                                                {rec.severity}
+                                                            </span>
+                                                            {rec.resolved && (
+                                                                <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200">
+                                                                    Resuelto
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-xs text-slate-400 shrink-0">
+                                                            {new Date(rec.incident_date).toLocaleDateString("es-CL", {
+                                                                day: "numeric", month: "short", year: "numeric"
+                                                            })}
+                                                        </p>
+                                                    </div>
+                                                    <p className="text-xs text-slate-600">{rec.description}</p>
+                                                    {rec.location && (
+                                                        <p className="text-xs text-slate-400">📍 {rec.location}</p>
+                                                    )}
+                                                    {rec.resolved && rec.resolution_notes && (
+                                                        <div className="mt-2 pl-2 border-l-2 border-emerald-300">
+                                                            <p className="text-xs font-semibold text-emerald-600">Medidas tomadas</p>
+                                                            <p className="text-xs text-slate-500">{rec.resolution_notes}</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )
+                                        })}
                                     </div>
                                 )}
                             </CardContent>

@@ -7,6 +7,7 @@ export interface ChatMessage {
     conversation_id: string
     sender_id: string
     content: string
+    meta?: null | Record<string, any>
     created_at: string
     sender?: {
         id: string
@@ -73,7 +74,7 @@ export function useChat(conversationId: string) {
     }, [conversationId])
 
     const sendMessage = useCallback(
-        async (content: string, senderId: string) => {
+        async (content: string, senderId: string, recipientId: string) => {
             const trimmed = content.trim()
             if (!trimmed) return
 
@@ -82,6 +83,15 @@ export function useChat(conversationId: string) {
                 sender_id: senderId,
                 content: trimmed,
             })
+
+            // Notificar al receptor en tiempo real via Broadcast
+            await supabase
+                .channel(`new-message:${recipientId}`)
+                .send({
+                    type: "broadcast",
+                    event: "message",
+                    payload: { conversation_id: conversationId, sender_id: senderId },
+                })
         },
         [conversationId, supabase]
     )

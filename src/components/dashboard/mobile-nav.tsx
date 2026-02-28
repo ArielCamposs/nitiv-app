@@ -10,6 +10,7 @@ import { usePathname } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 
 export function MobileNav({ userId }: { userId: string }) {
+    const [mounted, setMounted] = useState(false)
     const [open, setOpen] = useState(false)
     const [isAdmin, setIsAdmin] = useState(false)
     const pathname = usePathname()
@@ -19,6 +20,10 @@ export function MobileNav({ userId }: { userId: string }) {
     useEffect(() => {
         setOpen(false)
     }, [pathname])
+
+    useEffect(() => {
+        setMounted(true)
+    }, [])
 
     // Detectar si es admin
     useEffect(() => {
@@ -32,6 +37,15 @@ export function MobileNav({ userId }: { userId: string }) {
         }
         getRole()
     }, [userId])
+
+    if (!mounted) {
+        return (
+            <Button variant="ghost" size="icon" className="md:hidden" aria-hidden="true">
+                <Menu className="h-6 w-6" />
+                <span className="sr-only">Toggle menu</span>
+            </Button>
+        )
+    }
 
     return (
         <Sheet open={open} onOpenChange={setOpen}>

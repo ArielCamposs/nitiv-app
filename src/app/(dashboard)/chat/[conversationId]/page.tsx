@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { useChat } from "@/hooks/useChat"
-import { useUnreadCount } from "@/hooks/useUnreadCount"
+import { useChatUnread } from "@/context/chat-unread-context"
 import { ChatWindow } from "@/components/chat/ChatWindow"
 import { ArrowLeft, Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -30,7 +30,7 @@ export default function ConversationPage() {
     const [text, setText] = useState("")
     const inputRef = useRef<HTMLInputElement>(null)
     const { messages, loading, sendMessage } = useChat(conversationId)
-    const { markAsRead } = useUnreadCount(currentUserId)
+    const { markAsRead } = useChatUnread()
 
     useEffect(() => {
         const init = async () => {
@@ -57,6 +57,13 @@ export default function ConversationPage() {
         init()
     }, [conversationId])
 
+    // Auto-mark as read when new messages arrive while viewing this conversation
+    useEffect(() => {
+        if (messages.length > 0 && currentUserId) {
+            markAsRead(conversationId)
+        }
+    }, [messages])
+
     useEffect(() => {
         if (!otherUser?.id) return
         const channel = supabase
@@ -72,7 +79,7 @@ export default function ConversationPage() {
     const handleSend = async () => {
         if (!text.trim() || !currentUserId) return
         const content = text; setText("")
-        await sendMessage(content, currentUserId)
+        await sendMessage(content, currentUserId, otherUser?.id ?? "")
         inputRef.current?.focus()
     }
 

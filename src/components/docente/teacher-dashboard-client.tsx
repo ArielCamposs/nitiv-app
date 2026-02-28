@@ -114,62 +114,79 @@ export function TeacherDashboardClient({
                 </Card>
             </div>
 
-            {/* Heatmap */}
+            {/* Heatmap — rediseñado */}
             <Card className="border-0 shadow-sm">
                 <CardHeader className="pb-3">
                     <CardTitle className="text-base">Clima del aula</CardTitle>
                     <CardDescription>Últimas 4 semanas — energía registrada por día</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead>
-                                <tr>
-                                    <th className="w-8" />
-                                    {DAY_NAMES.map(d => (
-                                        <th key={d} className="text-xs font-medium text-slate-400 text-center pb-2 px-1">
-                                            {d}
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {WEEK_NAMES.map((week, wi) => (
-                                    <tr key={week}>
-                                        <td className="text-xs text-slate-400 pr-2 py-1">{week}</td>
-                                        {DAY_NAMES.map((_, di) => {
-                                            const cell = heatmapData.find(h => h.week === week && h.dayIndex === di)
-                                            const cfg = cell?.energy
-                                                ? ENERGY_CONFIG[cell.energy as keyof typeof ENERGY_CONFIG]
-                                                : null
-                                            return (
-                                                <td key={di} className="px-1 py-1">
-                                                    <div
-                                                        title={cfg?.label ?? "Sin registro"}
-                                                        className={`h-9 w-full rounded-md flex items-center justify-center text-base transition-all
-                                                            ${cfg ? `${cfg.bg} opacity-80` : "bg-slate-100"}`}
+                    {/* Cabecera de días */}
+                    <div className="grid grid-cols-[32px_repeat(5,1fr)] gap-1.5 mb-1">
+                        <div />
+                        {DAY_NAMES.map(d => (
+                            <div key={d} className="text-center text-[11px] font-medium text-slate-400">{d}</div>
+                        ))}
+                    </div>
+
+                    {/* Filas por semana */}
+                    <div className="space-y-1.5">
+                        {WEEK_NAMES.map((week) => (
+                            <div key={week} className="grid grid-cols-[32px_repeat(5,1fr)] gap-1.5 items-center">
+                                <span className="text-[11px] font-medium text-slate-400">{week}</span>
+                                {DAY_NAMES.map((_, di) => {
+                                    const cell = heatmapData.find(h => h.week === week && h.dayIndex === di)
+                                    const cfg = cell?.energy
+                                        ? ENERGY_CONFIG[cell.energy as keyof typeof ENERGY_CONFIG]
+                                        : null
+
+                                    return (
+                                        <div
+                                            key={di}
+                                            title={cfg?.label ?? "Sin registro"}
+                                            className="group relative h-10 rounded-xl flex flex-col items-center justify-center gap-0.5 transition-all"
+                                            style={{
+                                                background: cfg
+                                                    ? `${cfg.color}18`
+                                                    : "#f8fafc",
+                                                border: cfg
+                                                    ? `1.5px solid ${cfg.color}40`
+                                                    : "1.5px solid #e2e8f0",
+                                            }}
+                                        >
+                                            {cfg ? (
+                                                <>
+                                                    <span className="text-sm leading-none">{cfg.emoji}</span>
+                                                    <span
+                                                        className="text-[9px] font-semibold leading-none"
+                                                        style={{ color: cfg.color }}
                                                     >
-                                                        {cfg?.emoji ?? ""}
-                                                    </div>
-                                                </td>
-                                            )
-                                        })}
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                                        {cfg.label}
+                                                    </span>
+                                                </>
+                                            ) : (
+                                                <span className="text-[10px] text-slate-300">—</span>
+                                            )}
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        ))}
                     </div>
 
                     {/* Leyenda */}
-                    <div className="flex flex-wrap gap-4 mt-4">
+                    <div className="flex flex-wrap gap-3 mt-4 pt-3 border-t border-slate-100">
                         {Object.entries(ENERGY_CONFIG).map(([key, cfg]) => (
                             <div key={key} className="flex items-center gap-1.5">
-                                <span className="text-base">{cfg.emoji}</span>
+                                <div
+                                    className="w-3 h-3 rounded-full"
+                                    style={{ background: cfg.color }}
+                                />
                                 <span className="text-xs text-slate-500">{cfg.label}</span>
                             </div>
                         ))}
                         <div className="flex items-center gap-1.5">
-                            <div className="w-4 h-4 rounded-sm bg-slate-100" />
+                            <div className="w-3 h-3 rounded-full bg-slate-200" />
                             <span className="text-xs text-slate-400">Sin registro</span>
                         </div>
                     </div>

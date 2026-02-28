@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react"
 import { ChatMessage } from "@/hooks/useChat"
+import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 
 interface ChatWindowProps {
@@ -25,6 +26,7 @@ function getSenderName(msg: ChatMessage) {
 
 export function ChatWindow({ messages, currentUserId, loading }: ChatWindowProps) {
     const bottomRef = useRef<HTMLDivElement>(null)
+    const router = useRouter()
 
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -53,6 +55,55 @@ export function ChatWindow({ messages, currentUserId, loading }: ChatWindowProps
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
             {messages.map((msg) => {
                 const isOwn = msg.sender_id === currentUserId
+
+                if (msg.meta?.type === "notification") {
+                    return (
+                        <div
+                            key={msg.id}
+                            className={cn("flex flex-col gap-0.5", isOwn ? "items-end" : "items-start")}
+                        >
+                            {!isOwn && (
+                                <span className="text-xs text-slate-500 ml-1">{getSenderName(msg)}</span>
+                            )}
+                            <div
+                                className={cn(
+                                    "max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm",
+                                    isOwn
+                                        ? "bg-primary text-white rounded-tr-sm"
+                                        : "bg-slate-100 text-slate-800 rounded-tl-sm"
+                                )}
+                            >
+                                <p className={cn(
+                                    "text-xs font-semibold",
+                                    isOwn ? "text-white" : "text-slate-700"
+                                )}>
+                                    {msg.meta.title}
+                                </p>
+                                <p className={cn(
+                                    "text-xs mt-1",
+                                    isOwn ? "text-white/90" : "text-slate-500"
+                                )}>
+                                    {msg.meta.message}
+                                </p>
+                                {msg.meta?.related_url && (
+                                    <button
+                                        onClick={() => router.push(msg.meta!.related_url)}
+                                        className={cn(
+                                            "mt-2 text-[11px] font-semibold hover:underline block w-full text-left",
+                                            isOwn ? "text-white underline" : "text-primary"
+                                        )}
+                                    >
+                                        Ver detalle
+                                    </button>
+                                )}
+                            </div>
+                            <span className="text-[10px] text-slate-400 mx-1">
+                                {formatTime(msg.created_at)}
+                            </span>
+                        </div>
+                    )
+                }
+
                 return (
                     <div
                         key={msg.id}

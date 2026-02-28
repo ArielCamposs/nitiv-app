@@ -49,11 +49,6 @@ export function WeeklyCheckinCard() {
     const supabase = createClient()
     const [loading, setLoading] = useState(false)
     const [alreadyDone, setAlreadyDone] = useState(false)
-    const [stressValue, setStressValue] = useState(3)
-    const [anxietyValue, setAnxietyValue] = useState(3)
-
-    const stressLevel = Math.round(stressValue)
-    const anxietyLevel = Math.round(anxietyValue)
 
     const { weekNumber, year } = getWeekNumber()
 
@@ -132,9 +127,7 @@ export function WeeklyCheckinCard() {
                 .insert({
                     institution_id: student.institution_id,
                     student_id: student.id,
-                    emotion: "neutral",           // fijo en semanal, la reflexión es lo principal
-                    stress_level: stressLevel,
-                    anxiety_level: anxietyLevel,
+                    emotion: "neutral",
                     reflection: values.resumen.trim(),
                     type: "weekly",
                     week_number: weekNumber,
@@ -211,49 +204,6 @@ export function WeeklyCheckinCard() {
                         </p>
                     </div>
 
-                    {/* Nivel de Estrés */}
-                    <div className="space-y-2 px-1">
-                        <label className="text-sm font-medium text-slate-700">
-                            ¿Cómo fue tu nivel de estrés esta semana?{" "}
-                            <span className="font-bold text-orange-500">
-                                {LEVEL_LABELS[stressLevel]}
-                            </span>
-                        </label>
-                        <input
-                            type="range"
-                            min={1} max={5} step={0.01}
-                            value={stressValue}
-                            onChange={(e) => setStressValue(Number(e.target.value))}
-                            className="w-full h-2 rounded-full appearance-none cursor-pointer touch-none"
-                            style={{ accentColor: "#f97316" }}
-                        />
-                        <div className="flex justify-between text-xs text-slate-400">
-                            <span>Muy poco</span>
-                            <span>Muy alto</span>
-                        </div>
-                    </div>
-
-                    {/* Nivel de Ansiedad */}
-                    <div className="space-y-2 px-1">
-                        <label className="text-sm font-medium text-slate-700">
-                            ¿Cómo fue tu nivel de ansiedad esta semana?{" "}
-                            <span className="font-bold text-orange-500">
-                                {LEVEL_LABELS[anxietyLevel]}
-                            </span>
-                        </label>
-                        <input
-                            type="range"
-                            min={1} max={5} step={0.01}
-                            value={anxietyValue}
-                            onChange={(e) => setAnxietyValue(Number(e.target.value))}
-                            className="w-full h-2 rounded-full appearance-none cursor-pointer touch-none"
-                            style={{ accentColor: "#f97316" }}
-                        />
-                        <div className="flex justify-between text-xs text-slate-400">
-                            <span>Muy poco</span>
-                            <span>Muy alto</span>
-                        </div>
-                    </div>
 
                 </CardContent>
 

@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
-import { useUnreadCount } from "@/hooks/useUnreadCount"
+import { useChatUnread } from "@/context/chat-unread-context"
 import { usePresence } from "@/hooks/usePresence"
 import { ContactList } from "@/components/chat/ContactList"
 import { AvailabilitySelector } from "@/components/chat/AvailabilitySelector"
@@ -53,7 +53,7 @@ export default function ChatPage() {
     const [newThreadSubject, setNewThreadSubject] = useState("")
     const [newThreadContent, setNewThreadContent] = useState("")
 
-    const { unreadMap, totalUnread, markAsRead } = useUnreadCount(currentUser?.id ?? "")
+    const { unreadMap, totalUnread, markAsRead } = useChatUnread()
     const { isOnline } = usePresence(currentUser?.id ?? "", institutionId)
 
     useEffect(() => {
@@ -120,6 +120,27 @@ export default function ChatPage() {
             setLoading(false)
         }
         load()
+    }, [])
+
+    // ── Realtime: actualizar disponibilidad en vivo ────────────────────────────
+    useEffect(() => {
+        const channel = supabase
+            .channel("chat-page-availability")
+            .on(
+                "postgres_changes",
+                { event: "*", schema: "public", table: "user_availability" },
+                (payload) => {
+                    const d = payload.new as { user_id: string; status: string } | null
+                    if (!d?.user_id) return
+                    setContacts(prev =>
+                        prev.map(c =>
+                            c.id === d.user_id ? { ...c, availability: d.status } : c
+                        )
+                    )
+                }
+            )
+            .subscribe()
+        return () => { supabase.removeChannel(channel) }
     }, [])
 
     const openChat = async (contactId: string) => {

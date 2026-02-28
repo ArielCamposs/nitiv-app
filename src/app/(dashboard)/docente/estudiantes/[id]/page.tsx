@@ -27,28 +27,44 @@ async function getStudentForTeacher(studentId: string) {
 
     const { data: profile } = await supabase
         .from("users")
-        .select("id, institution_id")
+        .select("id, institution_id, role")
         .eq("id", user.id)
         .maybeSingle()
 
-    if (!profile) return null
+    if (!profile?.institution_id) return null
 
-    // Verificar que el estudiante es de un curso del docente
-    // Primero obtenemos los cursos del docente
-    const { data: teacherCourses } = await supabase
-        .from("course_teachers")
-        .select("course_id")
-        .eq("teacher_id", user.id)
+    const STAFF_ROLES = ["convivencia", "director", "dupla", "inspector", "utp", "admin"]
+    const isStaff = STAFF_ROLES.includes(profile.role)
 
-    if (!teacherCourses?.length) return null
-    const courseIds = teacherCourses.map(tc => tc.course_id)
+    let student: any = null
 
-    const { data: student } = await supabase
-        .from("students")
-        .select("id, name, last_name, rut, course_id, courses(name, level)")
-        .eq("id", studentId)
-        .in("course_id", courseIds) // Security check: must be in one of teacher's courses
-        .maybeSingle()
+    if (isStaff) {
+        // Staff can view any student in their institution
+        const { data } = await supabase
+            .from("students")
+            .select("id, name, last_name, rut, course_id, courses(name, level)")
+            .eq("id", studentId)
+            .eq("institution_id", profile.institution_id)
+            .maybeSingle()
+        student = data
+    } else {
+        // Docente: only students in their courses
+        const { data: teacherCourses } = await supabase
+            .from("course_teachers")
+            .select("course_id")
+            .eq("teacher_id", user.id)
+
+        if (!teacherCourses?.length) return null
+        const courseIds = teacherCourses.map(tc => tc.course_id)
+
+        const { data } = await supabase
+            .from("students")
+            .select("id, name, last_name, rut, course_id, courses(name, level)")
+            .eq("id", studentId)
+            .in("course_id", courseIds)
+            .maybeSingle()
+        student = data
+    }
 
     if (!student) return null
 
@@ -97,11 +113,28 @@ async function getStudentForTeacher(studentId: string) {
         .eq("student_id", studentId)
         .order("incident_date", { ascending: false })
 
+    // Convivencia records the student was involved in
+    const { data: convivenciaLinks } = await supabase
+        .from("convivencia_record_students")
+        .select(`
+            convivencia_records (
+                id, type, severity, location, description,
+                involved_count, actions_taken, resolved,
+                resolution_notes, incident_date
+            )
+        `)
+        .eq("student_id", studentId)
+
+    const convivenciaRecords = (convivenciaLinks ?? [])
+        .map((l: any) => l.convivencia_records)
+        .filter(Boolean)
+
     return {
         student,
         recentLogs: (recentLogs as any[]) ?? [],
         paec,
         decRecords: decRecords ?? [],
+        convivenciaRecords: convivenciaRecords ?? [],
         teacherId: profile.id,
         institutionId: profile.institution_id,
     }
@@ -117,7 +150,7 @@ export default async function StudentProfilePage({
 
     if (!data) return notFound()
 
-    const { student, recentLogs, paec, decRecords, teacherId, institutionId } = data
+    const { student, recentLogs, paec, decRecords, convivenciaRecords, teacherId, institutionId } = data
 
     // Calcular edad (si tuviera birthdate, aquí usamos lo del estudiante si se agrega fetch de rut/birthdate, por ahora omitido)
 
@@ -138,11 +171,12 @@ export default async function StudentProfilePage({
                 </div>
 
                 <Tabs defaultValue="perfil" className="w-full">
-                    <TabsList className="grid w-full grid-cols-5">
+                    <TabsList className="grid w-full grid-cols-6">
                         <TabsTrigger value="perfil">Perfil</TabsTrigger>
                         <TabsTrigger value="emocional">Emocional</TabsTrigger>
                         <TabsTrigger value="paec">PAEC</TabsTrigger>
                         <TabsTrigger value="dec">Historial DEC</TabsTrigger>
+                        <TabsTrigger value="convivencia">Convivencia</TabsTrigger>
                         <TabsTrigger value="docente">Docente</TabsTrigger>
                     </TabsList>
 
@@ -363,6 +397,72 @@ export default async function StudentProfilePage({
                                                 </div>
                                             </div>
                                         ))}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    <TabsContent value="convivencia" className="mt-6 space-y-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-base">Registros de Convivencia</CardTitle>
+                                <CardDescription>Casos de convivencia escolar en que ha sido involucrado</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {convivenciaRecords.length === 0 ? (
+                                    <p className="text-sm text-slate-400 py-4 text-center">
+                                        Sin registros de convivencia asociados a este estudiante.
+                                    </p>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {convivenciaRecords.map((rec: any) => {
+                                            const SEVERITY_COLORS: Record<string, string> = {
+                                                leve: "bg-yellow-100 text-yellow-700",
+                                                moderada: "bg-orange-100 text-orange-700",
+                                                grave: "bg-red-100 text-red-700",
+                                            }
+                                            const TYPE_LABELS: Record<string, string> = {
+                                                pelea: "Pelea", fuga: "Fuga / Escapada",
+                                                daño_material: "Daño Material", amenaza: "Amenaza",
+                                                acoso: "Acoso", consumo: "Consumo de Sustancias",
+                                                conflicto_grupal: "Conflicto Grupal", otro: "Otro",
+                                            }
+                                            return (
+                                                <div key={rec.id} className="border rounded-xl p-4 space-y-2">
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <span className="font-semibold text-sm text-slate-900">
+                                                                {TYPE_LABELS[rec.type] ?? rec.type}
+                                                            </span>
+                                                            <Badge variant="outline" className={`text-[10px] border-0 ${SEVERITY_COLORS[rec.severity] ?? ""}`}>
+                                                                {rec.severity}
+                                                            </Badge>
+                                                            {rec.resolved && (
+                                                                <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200">
+                                                                    Resuelto
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-xs text-slate-400 shrink-0">
+                                                            {new Date(rec.incident_date).toLocaleDateString("es-CL", {
+                                                                day: "numeric", month: "short", year: "numeric"
+                                                            })}
+                                                        </p>
+                                                    </div>
+                                                    <p className="text-xs text-slate-600">{rec.description}</p>
+                                                    {rec.location && (
+                                                        <p className="text-xs text-slate-400">📍 {rec.location}</p>
+                                                    )}
+                                                    {rec.resolved && rec.resolution_notes && (
+                                                        <div className="mt-2 pl-2 border-l-2 border-emerald-300">
+                                                            <p className="text-xs font-semibold text-emerald-600">Resolución</p>
+                                                            <p className="text-xs text-slate-500">{rec.resolution_notes}</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )
+                                        })}
                                     </div>
                                 )}
                             </CardContent>

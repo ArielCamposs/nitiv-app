@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { useUnreadCount } from "@/hooks/useUnreadCount"
+import { useChatUnread } from "@/context/chat-unread-context"
 import { DecBadge } from "@/components/dashboard/dec-badge"
 import { NotificationBell } from "@/components/layout/notification-bell"
 import { createClient } from "@/lib/supabase/client"
@@ -90,7 +90,7 @@ export function AdminSidebarContent({ userId, showBell = true }: { userId: strin
     const pathname = usePathname()
     const router = useRouter()
     const supabase = createClient()
-    const { totalUnread } = useUnreadCount(userId)
+    const { totalUnread } = useChatUnread()
 
     const handleLogout = async () => {
         const { error } = await supabase.auth.signOut()

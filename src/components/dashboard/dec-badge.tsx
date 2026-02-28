@@ -1,9 +1,9 @@
 "use client"
 
-import { usePendingDec } from "@/hooks/use-pending-dec"
+import { useDecBadge } from "@/context/dec-badge-context"
 
 export function DecBadge() {
-    const count = usePendingDec()
+    const { count } = useDecBadge()
 
     if (count === 0) return null
 

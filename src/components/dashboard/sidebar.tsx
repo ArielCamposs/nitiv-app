@@ -6,9 +6,9 @@ import { useState, useEffect } from "react"
 import {
     Home, LogOut, ShoppingBag, ThermometerSun, Users, LifeBuoy,
     Shield, BarChart3, FileText, MessageSquare, Activity, UserCircle,
-    Calendar, BookOpen, Library, Zap
+    Calendar, BookOpen, Library, Zap, ClipboardList
 } from "lucide-react"
-import { useUnreadCount } from "@/hooks/useUnreadCount"
+import { useChatUnread } from "@/context/chat-unread-context"
 import { DecBadge } from "@/components/dashboard/dec-badge"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
@@ -84,6 +84,7 @@ function getSidebarGroups(currentRole: string | null): NavGroup[] {
 
         gestionCasos.push({ title: "Registro DEC", href: decHref, icon: Shield, badge: true })
         gestionCasos.push({ title: "PAEC", href: "/paec", icon: LifeBuoy })
+        gestionCasos.push({ title: "Reg. Convivencia", href: "/registros-convivencia", icon: ClipboardList })
     }
 
     if (hasDeepAccess) {
@@ -150,8 +151,9 @@ export function SidebarContent({ userId, showBell = true }: { userId: string; sh
     const router = useRouter()
     const supabase = createClient()
     const [role, setRole] = useState<string | null>(null)
+    const [fullName, setFullName] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
-    const { totalUnread } = useUnreadCount(userId)
+    const { totalUnread } = useChatUnread()
 
     useEffect(() => {
         const getRole = async () => {
@@ -160,10 +162,13 @@ export function SidebarContent({ userId, showBell = true }: { userId: string; sh
                 if (!user) return
                 const { data: profile } = await supabase
                     .from("users")
-                    .select("role")
+                    .select("role, name, last_name")
                     .eq("id", user.id)
                     .single()
-                if (profile) setRole(profile.role)
+                if (profile) {
+                    setRole(profile.role)
+                    setFullName([profile.name, profile.last_name].filter(Boolean).join(" "))
+                }
             } catch (error) {
                 console.error("Error fetching role:", error)
             } finally {
@@ -240,8 +245,42 @@ export function SidebarContent({ userId, showBell = true }: { userId: string; sh
                 ))}
             </nav>
 
-            {/* Zona inferior: emergencia + logout */}
+            {/* Zona inferior: nombre + rol + emergencia + logout */}
             <div className="border-t pt-4 space-y-1">
+
+                {/* Avatar con iniciales + nombre + rol */}
+                {fullName && (
+                    <div className="px-3 py-2 mb-2 flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                            <span className="text-xs font-bold text-primary">
+                                {fullName
+                                    .split(" ")
+                                    .slice(0, 2)
+                                    .map((n) => n[0])
+                                    .join("")
+                                    .toUpperCase()}
+                            </span>
+                        </div>
+                        <div className="min-w-0">
+                            <p className="text-sm font-semibold text-slate-800 truncate">
+                                {fullName}
+                            </p>
+                            <p className="text-xs text-slate-400">
+                                {role === "docente" ? "Docente"
+                                    : role === "dupla" ? "Dupla Psicosocial"
+                                        : role === "convivencia" ? "Encargado de Convivencia"
+                                            : role === "director" ? "Director"
+                                                : role === "admin" ? "Administrador"
+                                                    : role === "inspector" ? "Inspector"
+                                                        : role === "utp" ? "UTP"
+                                                            : role === "estudiante" ? "Estudiante"
+                                                                : role === "centro_alumnos" ? "Centro de Alumnos"
+                                                                    : role ?? ""}
+                            </p>
+                        </div>
+                    </div>
+                )}
+
                 {(role === "estudiante" || role === "centro_alumnos") && (
                     <Link
                         href="/estudiante/ayuda"

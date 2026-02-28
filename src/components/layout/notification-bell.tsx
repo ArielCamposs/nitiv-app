@@ -1,11 +1,13 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
+import { usePathname } from "next/navigation"
 import { Bell, CheckCheck, X } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 import { formatDistanceToNow } from "date-fns"
 import { es } from "date-fns/locale"
+import { NotificationShareDialog } from "@/components/chat/notification-share-dialog"
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 type Notification = {
@@ -34,9 +36,25 @@ export function NotificationBell({ userId }: { userId: string }) {
     const [open, setOpen] = useState(false)
     const [notifications, setNotifications] = useState<Notification[]>([])
     const [loading, setLoading] = useState(true)
+    const [shareNotif, setShareNotif] = useState<Notification | null>(null)
+    const [institutionId, setInstitutionId] = useState<string | null>(null)
     const panelRef = useRef<HTMLDivElement>(null)
 
+    const pathname = usePathname()
+
     const unreadCount = notifications.filter(n => !n.read).length
+
+    // ── Cargar institution_id una sola vez ─────────────────────────────────────
+    useEffect(() => {
+        supabase
+            .from("users")
+            .select("institution_id")
+            .eq("id", userId)
+            .single()
+            .then(({ data }) => {
+                if (data) setInstitutionId(data.institution_id)
+            })
+    }, [userId])
 
     // ── Fetch inicial ─────────────────────────────────────────────────────────
     const fetchNotifications = useCallback(async () => {
@@ -47,6 +65,59 @@ export function NotificationBell({ userId }: { userId: string }) {
     }, [])
 
     useEffect(() => { fetchNotifications() }, [fetchNotifications])
+
+    // ── Realtime: nuevas notificaciones sin recargar ───────────────────────────
+    useEffect(() => {
+        if (!userId) return
+        const channel = supabase
+            .channel(`bell-notifs-${userId}`)
+            .on(
+                "postgres_changes",
+                {
+                    event: "INSERT",
+                    schema: "public",
+                    table: "notifications",
+                    filter: `recipient_id=eq.${userId}`,
+                },
+                () => fetchNotifications()
+            )
+            .subscribe()
+        return () => { supabase.removeChannel(channel) }
+    }, [userId, fetchNotifications])
+
+    // ── Auto-leer al navegar a secciones relacionadas ─────────────────────────
+    useEffect(() => {
+        if (loading) return
+
+        // Mapa: segmento de ruta → tipos que se marcan al visitar esa sección
+        const ROUTE_TYPE_MAP: Array<{ segment: string; types: string[] }> = [
+            { segment: "/dec", types: ["dec_nuevo", "dec_resuelto"] },
+            { segment: "/actividades", types: ["actividad_nueva"] },
+            { segment: "/pulso", types: ["pulso_activo"] },
+            { segment: "/estudiantes", types: ["estudiante_nuevo"] },
+            { segment: "/usuarios", types: ["usuario_nuevo"] },
+        ]
+
+        const matchedTypes = ROUTE_TYPE_MAP
+            .filter(({ segment }) => pathname.includes(segment))
+            .flatMap(({ types }) => types)
+
+        if (matchedTypes.length === 0) return
+
+        const unread = notifications.filter(
+            n => !n.read && matchedTypes.includes(n.type)
+        )
+        if (unread.length === 0) return
+
+        setNotifications(prev =>
+            prev.map(n => unread.some(u => u.id === n.id) ? { ...n, read: true } : n)
+        )
+        fetch("/api/notifications", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ types: matchedTypes }),
+        })
+    }, [pathname, loading])
 
     // ── Realtime: escucha nuevas notificaciones ───────────────────────────────
     useEffect(() => {
@@ -169,46 +240,59 @@ export function NotificationBell({ userId }: { userId: string }) {
                                 {notifications.map(n => {
                                     const meta = TYPE_META[n.type] ?? { emoji: "🔔", color: "bg-slate-50 border-slate-100" }
                                     return (
-                                        <li key={n.id}>
-                                            <button
-                                                onClick={() => handleClick(n)}
-                                                className={cn(
-                                                    "w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors border-b border-slate-50 flex gap-3 items-start",
-                                                    !n.read && "bg-indigo-50/40"
-                                                )}
-                                            >
-                                                {/* Emoji */}
-                                                <div className={cn(
-                                                    "w-8 h-8 rounded-lg border flex items-center justify-center text-base shrink-0",
-                                                    meta.color
-                                                )}>
-                                                    {meta.emoji}
-                                                </div>
-
-                                                {/* Contenido */}
-                                                <div className="flex-1 min-w-0">
-                                                    <p className={cn(
-                                                        "text-sm leading-snug",
-                                                        n.read ? "text-slate-600 font-normal" : "text-slate-900 font-medium"
+                                        <li key={n.id} className="relative group border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
+                                            <div className="flex gap-3 items-start px-4 py-3">
+                                                {/* Botón principal un click en Notificación */}
+                                                <button
+                                                    onClick={() => handleClick(n)}
+                                                    className="flex-1 text-left flex gap-3 items-start outline-none"
+                                                >
+                                                    {/* Emoji */}
+                                                    <div className={cn(
+                                                        "w-8 h-8 rounded-lg border flex items-center justify-center text-base shrink-0",
+                                                        meta.color
                                                     )}>
-                                                        {n.title}
-                                                    </p>
-                                                    <p className="text-xs text-slate-400 mt-0.5 leading-snug line-clamp-2">
-                                                        {n.message}
-                                                    </p>
-                                                    <p className="text-[10px] text-slate-300 mt-1">
-                                                        {formatDistanceToNow(new Date(n.created_at), {
-                                                            addSuffix: true,
-                                                            locale: es,
-                                                        })}
-                                                    </p>
-                                                </div>
+                                                        {meta.emoji}
+                                                    </div>
 
-                                                {/* Punto azul si no leída */}
-                                                {!n.read && (
-                                                    <div className="w-2 h-2 rounded-full bg-indigo-500 shrink-0 mt-1.5" />
-                                                )}
-                                            </button>
+                                                    {/* Contenido */}
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className={cn(
+                                                            "text-sm leading-snug",
+                                                            n.read ? "text-slate-600 font-normal" : "text-slate-900 font-medium"
+                                                        )}>
+                                                            {n.title}
+                                                        </p>
+                                                        <p className="text-xs text-slate-400 mt-0.5 leading-snug line-clamp-2">
+                                                            {n.message}
+                                                        </p>
+                                                        <p className="text-[10px] text-slate-300 mt-1">
+                                                            {formatDistanceToNow(new Date(n.created_at), {
+                                                                addSuffix: true,
+                                                                locale: es,
+                                                            })}
+                                                        </p>
+                                                    </div>
+
+                                                    {/* Punto azul si no leída */}
+                                                    {!n.read && (
+                                                        <div className="w-2 h-2 rounded-full bg-indigo-500 shrink-0 mt-1.5" />
+                                                    )}
+                                                </button>
+
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        setShareNotif(n)
+                                                    }}
+                                                    className={cn(
+                                                        "text-[11px] text-primary hover:underline font-medium px-2 py-1 bg-primary/5 rounded absolute top-2 right-4 shadow-sm transition-opacity",
+                                                        "opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                                                    )}
+                                                >
+                                                    Enviar al chat
+                                                </button>
+                                            </div>
                                         </li>
                                     )
                                 })}
@@ -216,6 +300,27 @@ export function NotificationBell({ userId }: { userId: string }) {
                         )}
                     </div>
                 </div>
+            )}
+
+            {shareNotif && institutionId && (
+                <NotificationShareDialog
+                    open={shareNotif !== null}
+                    onOpenChange={(v) => { if (!v) setShareNotif(null) }}
+                    currentUserId={userId}
+                    institutionId={institutionId}
+                    notification={{
+                        id: shareNotif.id,
+                        type: shareNotif.type,
+                        title: shareNotif.title,
+                        message: shareNotif.message,
+                        related_id: null,
+                        related_url: shareNotif.related_url
+                    }}
+                    onShared={() => {
+                        setShareNotif(null)
+                        setOpen(false)
+                    }}
+                />
             )}
         </div>
     )
