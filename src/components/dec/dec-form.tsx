@@ -84,6 +84,7 @@ export function DecForm({ students, notifiables = [], teacherId, institutionId }
     const [incidentDate, setIncidentDate] = useState(
         new Date().toISOString().slice(0, 16)
     )
+    const [incidentEndDate, setIncidentEndDate] = useState("")
     const [activity, setActivity] = useState("")
     const [guardianContacted, setGuardianContacted] = useState(false)
 
@@ -101,16 +102,7 @@ export function DecForm({ students, notifiables = [], teacherId, institutionId }
     // Sección 5: Destinatarios
     const [recipients, setRecipients] = useState<string[]>([])
 
-    // Cuando cambia severity, pre-marcar según protocolo
-    useEffect(() => {
-        if (severity === "severa" && Array.isArray(notifiables) && notifiables.length > 0) {
-            // Si es severa, pre-marcar director y convivencia obligatoriamente
-            const obligatory = notifiables
-                .filter((u) => u.role === "director" || u.role === "convivencia")
-                .map((u) => u.id)
-            setRecipients((prev) => [...new Set([...prev, ...obligatory])])
-        }
-    }, [severity, notifiables])
+    // (El usuario elige libremente a quién notificar sin pre-marcar por severidad)
 
     const toggleItem = (
         list: string[],
@@ -148,6 +140,7 @@ export function DecForm({ students, notifiables = [], teacherId, institutionId }
                     description: description.trim() || null,
                     guardian_contacted: guardianContacted,
                     incident_date: new Date(incidentDate).toISOString(),
+                    end_date: incidentEndDate ? new Date(incidentEndDate).toISOString() : null,
                     resolved: false,
                 })
                 .select("id")
@@ -191,10 +184,8 @@ export function DecForm({ students, notifiables = [], teacherId, institutionId }
                         .single()
                     const reporterName = reporterObj ? `${reporterObj.name} ${reporterObj.last_name}` : "Docente"
 
-                    const roleRecipients = await getUserIdsByRoles(institutionId, ["director", "dupla", "convivencia"], teacherId)
-                    // Merge with the manually selected recipients to avoid missing anyone
-                    const finalRecipients = [...new Set([...recipients, ...roleRecipients])]
-
+                    // Notificar SOLO a los seleccionados manualmente
+                    const finalRecipients = recipients
                     await createNotifications({
                         institutionId,
                         recipientIds: finalRecipients,
@@ -257,16 +248,29 @@ export function DecForm({ students, notifiables = [], teacherId, institutionId }
                             </Select>
                         </div>
 
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-900">
-                                Fecha y hora <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="datetime-local"
-                                className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-                                value={incidentDate}
-                                onChange={(e) => setIncidentDate(e.target.value)}
-                            />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-slate-900">
+                                    Hora de inicio <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="datetime-local"
+                                    className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                                    value={incidentDate}
+                                    onChange={(e) => setIncidentDate(e.target.value)}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-slate-900">
+                                    Hora de término <span className="text-slate-400 font-normal">(opcional)</span>
+                                </label>
+                                <input
+                                    type="datetime-local"
+                                    className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                                    value={incidentEndDate}
+                                    onChange={(e) => setIncidentEndDate(e.target.value)}
+                                />
+                            </div>
                         </div>
 
                         <div className="space-y-2">
@@ -471,12 +475,6 @@ export function DecForm({ students, notifiables = [], teacherId, institutionId }
                     <CardHeader>
                         <CardTitle>Sección 5 — Notificaciones</CardTitle>
                         <CardDescription>
-                            ¿A quién debe llegar esta alerta dentro de la app?
-                            {severity === "severa" && (
-                                <span className="block mt-1 text-rose-600 text-xs font-medium">
-                                    🔴 Caso severo: Director y Convivencia son pre-marcados obligatoriamente.
-                                </span>
-                            )}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
@@ -487,10 +485,6 @@ export function DecForm({ students, notifiables = [], teacherId, institutionId }
                         ) : (
                             <div className="space-y-2">
                                 {notifiables.map((u) => {
-                                    const isObligatory =
-                                        severity === "severa" &&
-                                        (u.role === "director" || u.role === "convivencia")
-
                                     return (
                                         <label
                                             key={u.id}
@@ -503,9 +497,7 @@ export function DecForm({ students, notifiables = [], teacherId, institutionId }
                                                 <input
                                                     type="checkbox"
                                                     checked={recipients.includes(u.id)}
-                                                    disabled={isObligatory}
                                                     onChange={() => {
-                                                        if (isObligatory) return
                                                         setRecipients((prev) =>
                                                             prev.includes(u.id)
                                                                 ? prev.filter((id) => id !== u.id)
@@ -520,11 +512,6 @@ export function DecForm({ students, notifiables = [], teacherId, institutionId }
                                                     </p>
                                                     <p className="text-xs capitalize text-slate-400">
                                                         {u.role}
-                                                        {isObligatory && (
-                                                            <span className="ml-1 text-rose-500">
-                                                                (obligatorio)
-                                                            </span>
-                                                        )}
                                                     </p>
                                                 </div>
                                             </div>

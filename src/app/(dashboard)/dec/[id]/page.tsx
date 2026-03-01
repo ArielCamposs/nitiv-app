@@ -49,6 +49,7 @@ async function getDecDetail(id: string) {
       guardian_contacted,
       resolved,
       incident_date,
+      end_date,
       created_at,
       students (
         id,
@@ -176,6 +177,15 @@ export default async function DecDetailPage({
                                 hour: "2-digit",
                                 minute: "2-digit",
                             })}
+                            {incident.end_date && (
+                                <>
+                                    {" - "}
+                                    {new Date(incident.end_date).toLocaleTimeString("es-CL", {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                    })}
+                                </>
+                            )}
                         </p>
                     </div>
 
@@ -246,6 +256,29 @@ export default async function DecDetailPage({
                 {/* Sección 2: Contexto */}
                 <SectionBlock title="2. Contexto del incidente">
                     <div className="grid grid-cols-2 gap-y-3 gap-x-6 text-sm">
+                        <div>
+                            <p className="text-xs text-slate-400">Fecha y hora de inicio</p>
+                            <p className="text-slate-700">
+                                {new Date(incident.incident_date).toLocaleDateString("es-CL", {
+                                    day: "2-digit",
+                                    month: "long",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                })}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-xs text-slate-400">Hora de término</p>
+                            <p className="text-slate-700">
+                                {incident.end_date
+                                    ? new Date(incident.end_date).toLocaleTimeString("es-CL", {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                    })
+                                    : "No registrada"}
+                            </p>
+                        </div>
                         <div>
                             <p className="text-xs text-slate-400">Lugar</p>
                             <p className="text-slate-700">{incident.location ?? "No registrado"}</p>

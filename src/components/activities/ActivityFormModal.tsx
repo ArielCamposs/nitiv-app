@@ -6,10 +6,10 @@ import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
-import { createNotifications, getAllUserIds } from "@/lib/notifications"
+import { createNotifications, getAllUserIds, getStudentIdsByCourses, getUserIdsByRoles } from "@/lib/notifications"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
-import { X, MapPin, Paperclip } from "lucide-react"
+import { X, MapPin, Paperclip, Palette, Mic, Trophy, PartyPopper, GraduationCap, Handshake, Pin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -140,7 +140,22 @@ export function ActivityFormModal({
                 .single()
 
             if (!isEdit && saved) {
-                const recipients = await getAllUserIds(institutionId, userId)
+                let recipients: string[] = []
+
+                if (values.target === "por_curso" && values.course_ids && values.course_ids.length > 0) {
+                    // Notificar a estudiantes de los cursos seleccionados
+                    const studentIds = await getStudentIdsByCourses(institutionId, values.course_ids)
+
+                    // Notificar al staff (docentes, directivos, dupla, etc) pero excluir al creador
+                    const staffRoles = ["admin", "director", "dupla", "convivencia", "docente", "inspector", "utp"]
+                    const staffIds = await getUserIdsByRoles(institutionId, staffRoles, userId)
+
+                    recipients = [...studentIds, ...staffIds]
+                } else {
+                    // "general": Notificar a todos en el colegio excepto el creador
+                    recipients = await getAllUserIds(institutionId, userId)
+                }
+
                 await createNotifications({
                     institutionId,
                     recipientIds: recipients,
@@ -217,25 +232,26 @@ export function ActivityFormModal({
                         <label className="text-sm font-medium text-slate-800">Tipo de actividad</label>
                         <div className="grid grid-cols-4 gap-2">
                             {[
-                                { value: "taller", emoji: "🎨", label: "Taller" },
-                                { value: "charla", emoji: "🎤", label: "Charla" },
-                                { value: "deporte", emoji: "⚽", label: "Deporte" },
-                                { value: "cultural", emoji: "🎭", label: "Cultural" },
-                                { value: "academico", emoji: "📚", label: "Académico" },
-                                { value: "reunion", emoji: "🤝", label: "Reunión" },
-                                { value: "otro", emoji: "📌", label: "Otro" },
+                                { value: "taller", icon: Palette, label: "Taller" },
+                                { value: "charla", icon: Mic, label: "Charla" },
+                                { value: "deporte", icon: Trophy, label: "Deporte" },
+                                { value: "cultural", icon: PartyPopper, label: "Cultural" },
+                                { value: "academico", icon: GraduationCap, label: "Académico" },
+                                { value: "reunion", icon: Handshake, label: "Reunión" },
+                                { value: "otro", icon: Pin, label: "Otro" },
                             ].map(opt => {
                                 const selected = form.watch("activity_type") === opt.value
+                                const Icon = opt.icon
                                 return (
                                     <button key={opt.value} type="button"
                                         onClick={() => form.setValue("activity_type", opt.value as any)}
                                         className={cn(
-                                            "flex flex-col items-center gap-1 rounded-xl border-2 px-2 py-2 text-xs font-medium transition-all",
+                                            "flex flex-col items-center gap-2 rounded-xl border-2 px-2 py-3 text-xs font-medium transition-all",
                                             selected
                                                 ? "border-indigo-400 bg-indigo-50 text-indigo-800"
                                                 : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
                                         )}>
-                                        <span className="text-lg leading-none">{opt.emoji}</span>
+                                        <Icon className="w-5 h-5" />
                                         <span>{opt.label}</span>
                                     </button>
                                 )
@@ -277,13 +293,12 @@ export function ActivityFormModal({
                         </div>
                     </div>
 
-                    {/* Target */}
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-slate-800">Dirigido a</label>
                         <div className="grid grid-cols-2 gap-2">
                             {[
-                                { value: "general", label: "Todo el colegio", emoji: "🏫" },
-                                { value: "por_curso", label: "Curso específico", emoji: "📋" },
+                                { value: "general", label: "Todo el colegio" },
+                                { value: "por_curso", label: "Curso específico" },
                             ].map(opt => (
                                 <button key={opt.value} type="button"
                                     onClick={() => form.setValue("target", opt.value as "general" | "por_curso")}
@@ -293,7 +308,6 @@ export function ActivityFormModal({
                                             ? "border-indigo-400 bg-indigo-50 text-indigo-800"
                                             : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
                                     )}>
-                                    <span>{opt.emoji}</span>
                                     <span>{opt.label}</span>
                                 </button>
                             ))}

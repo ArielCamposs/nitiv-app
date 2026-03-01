@@ -57,7 +57,7 @@ async function getDirectorData() {
         supabase.from("courses").select("id, name, level, section").eq("institution_id", iid).eq("active", true),
         supabase.from("students").select("id, name, last_name, course_id").eq("institution_id", iid).eq("active", true),
         supabase.from("alerts").select("id, student_id, type, description, created_at").eq("institution_id", iid).eq("resolved", false).order("created_at", { ascending: false }),
-        supabase.from("incidents").select("id, student_id, folio, severity, type, resolved, incident_date").eq("institution_id", iid).eq("resolved", false).order("incident_date", { ascending: false }).limit(10),
+        supabase.from("incidents").select("id, student_id, folio, severity, type, resolved, incident_date, end_date").eq("institution_id", iid).eq("resolved", false).order("incident_date", { ascending: false }).limit(10),
         supabase.from("paec").select("id, student_id, review_date, requires_adjustments, representative_signed, guardian_signed, active").eq("institution_id", iid).eq("active", true),
         supabase.from("emotional_logs").select("student_id, emotion, created_at").eq("institution_id", iid).gte("created_at", new Date(new Date().setMonth(new Date().getMonth() - 6)).toISOString()).order("created_at", { ascending: true }),
         supabase.from("teacher_logs").select("course_id, energy_level, log_date").eq("institution_id", iid).gte("log_date", new Date(new Date().setDate(new Date().getDate() - 28)).toISOString().split("T")[0]),

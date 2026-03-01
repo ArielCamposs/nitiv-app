@@ -37,6 +37,7 @@ type DecCase = {
     severity: string
     location: string | null
     incident_date: string
+    end_date?: string | null
     resolved: boolean
     students: {
         id: string
@@ -168,6 +169,20 @@ export function DecListDupla({ cases, currentUserId, userRole }: Props) {
                                                         day: "2-digit",
                                                         month: "short",
                                                     })}
+                                                    {" · "}
+                                                    {new Date(dec.incident_date).toLocaleTimeString("es-CL", {
+                                                        hour: "2-digit",
+                                                        minute: "2-digit",
+                                                    })}
+                                                    {dec.end_date && (
+                                                        <>
+                                                            {" - "}
+                                                            {new Date(dec.end_date).toLocaleTimeString("es-CL", {
+                                                                hour: "2-digit",
+                                                                minute: "2-digit",
+                                                            })}
+                                                        </>
+                                                    )}
                                                 </span>
                                             </div>
                                         </Link>

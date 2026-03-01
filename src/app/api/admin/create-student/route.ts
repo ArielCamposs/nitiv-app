@@ -45,7 +45,20 @@ export async function POST(req: Request) {
         })
 
         if (authError) {
-            return NextResponse.json({ error: authError.message }, { status: 400 })
+            console.error("[create-student authError]:", JSON.stringify(authError, null, 2))
+            let errorMessage = authError.message
+
+            const msgLower = errorMessage.toLowerCase()
+            if (
+                msgLower.includes("already registered") ||
+                msgLower.includes("already exists") ||
+                msgLower.includes("user_already_exists") ||
+                (msgLower.includes("email") && msgLower.includes("use")) ||
+                authError.code === "user_already_exists"
+            ) {
+                errorMessage = "Este correo electrónico ya está registrado."
+            }
+            return NextResponse.json({ error: errorMessage }, { status: 400 })
         }
 
         const authUserId = authData.user.id
@@ -63,7 +76,13 @@ export async function POST(req: Request) {
         if (userError) {
             // Rollback: eliminar el usuario de Auth
             await supabaseAdmin.auth.admin.deleteUser(authUserId)
-            return NextResponse.json({ error: userError.message }, { status: 400 })
+
+            let errorMessage = userError.message
+            if (userError.code === "23505" || errorMessage.includes("unique constraint") || errorMessage.includes("users_email_key")) {
+                errorMessage = "Este correo electrónico ya está registrado en el sistema."
+            }
+
+            return NextResponse.json({ error: errorMessage }, { status: 400 })
         }
 
         // 3. Crear registro en tabla students
@@ -88,7 +107,17 @@ export async function POST(req: Request) {
         if (studentError) {
             // Rollback completo
             await supabaseAdmin.auth.admin.deleteUser(authUserId)
-            return NextResponse.json({ error: studentError.message }, { status: 400 })
+
+            let errorMessage = studentError.message
+            if (studentError.code === "23505" || errorMessage.includes("unique constraint") || errorMessage.includes("students_rut_key")) {
+                if (errorMessage.toLowerCase().includes("rut")) {
+                    errorMessage = "Este RUT ya está registrado en el sistema."
+                } else {
+                    errorMessage = "Este correo electrónico (o RUT) ya está registrado en el sistema."
+                }
+            }
+
+            return NextResponse.json({ error: errorMessage }, { status: 400 })
         }
 
         return NextResponse.json({ student })

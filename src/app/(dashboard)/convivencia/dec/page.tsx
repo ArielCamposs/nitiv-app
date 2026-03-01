@@ -26,6 +26,7 @@ async function getDecCasesForConvivencia() {
       severity,
       location,
       incident_date,
+      end_date,
       resolved,
       students (
         id,

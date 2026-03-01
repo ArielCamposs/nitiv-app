@@ -63,7 +63,14 @@ export async function POST(req: Request) {
         })
 
         if (authError) {
-            if (authError.message.includes("already registered")) {
+            const msgLower = authError.message.toLowerCase()
+            if (
+                msgLower.includes("already registered") ||
+                msgLower.includes("already exists") ||
+                msgLower.includes("user_already_exists") ||
+                (msgLower.includes("email") && msgLower.includes("use")) ||
+                authError.code === "user_already_exists"
+            ) {
                 return NextResponse.json({ error: "El email ya está registrado" }, { status: 409 })
             }
             return NextResponse.json({ error: authError.message }, { status: 400 })
@@ -73,14 +80,14 @@ export async function POST(req: Request) {
         const { data: newUser, error: profileError } = await supabaseAdmin
             .from("users")
             .insert({
-                id:             authUser.user.id,
+                id: authUser.user.id,
                 institution_id: caller.institution_id,
                 role,
                 name,
-                last_name:      last_name ?? null,
+                last_name: last_name ?? null,
                 email,
-                phone:          phone ?? null,
-                active:         true,
+                phone: phone ?? null,
+                active: true,
             })
             .select("id, name, last_name, email, role, active, created_at")
             .single()

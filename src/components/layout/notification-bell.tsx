@@ -38,21 +38,25 @@ export function NotificationBell({ userId }: { userId: string }) {
     const [loading, setLoading] = useState(true)
     const [shareNotif, setShareNotif] = useState<Notification | null>(null)
     const [institutionId, setInstitutionId] = useState<string | null>(null)
+    const [userRole, setUserRole] = useState<string | null>(null)
     const panelRef = useRef<HTMLDivElement>(null)
 
     const pathname = usePathname()
 
     const unreadCount = notifications.filter(n => !n.read).length
 
-    // ── Cargar institution_id una sola vez ─────────────────────────────────────
+    // ── Cargar institution_id y rol una sola vez ──────────────────────────────
     useEffect(() => {
         supabase
             .from("users")
-            .select("institution_id")
+            .select("institution_id, role")
             .eq("id", userId)
             .single()
             .then(({ data }) => {
-                if (data) setInstitutionId(data.institution_id)
+                if (data) {
+                    setInstitutionId(data.institution_id)
+                    setUserRole(data.role)
+                }
             })
     }, [userId])
 
@@ -280,18 +284,20 @@ export function NotificationBell({ userId }: { userId: string }) {
                                                     )}
                                                 </button>
 
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        setShareNotif(n)
-                                                    }}
-                                                    className={cn(
-                                                        "text-[11px] text-primary hover:underline font-medium px-2 py-1 bg-primary/5 rounded absolute top-2 right-4 shadow-sm transition-opacity",
-                                                        "opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                                                    )}
-                                                >
-                                                    Enviar al chat
-                                                </button>
+                                                {userRole !== "estudiante" && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            setShareNotif(n)
+                                                        }}
+                                                        className={cn(
+                                                            "text-[11px] text-primary hover:underline font-medium px-2 py-1 bg-primary/5 rounded absolute right-4 top-1/2 -translate-y-1/2 shadow-sm transition-opacity",
+                                                            "opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                                                        )}
+                                                    >
+                                                        Enviar al chat
+                                                    </button>
+                                                )}
                                             </div>
                                         </li>
                                     )

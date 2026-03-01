@@ -9,6 +9,7 @@ type DecCase = {
     severity: string
     location: string | null
     incident_date: string
+    end_date?: string | null
     resolved: boolean
     students: {
         name: string
@@ -62,14 +63,28 @@ export function DecCard({ dec }: { dec: DecCase }) {
                         <span className="text-xs text-slate-600">
                             {TYPE_LABELS[dec.type] ?? dec.type}
                         </span>
-                        <span className="text-xs text-slate-400">
-                            {new Date(dec.incident_date).toLocaleDateString("es-CL", {
-                                day: "2-digit",
-                                month: "short",
-                                year: "numeric",
+                        <span className="text-xs text-slate-400 text-right">
+                            {new Date(dec.incident_date).toLocaleTimeString("es-CL", {
                                 hour: "2-digit",
                                 minute: "2-digit",
                             })}
+                            {dec.end_date && (
+                                <>
+                                    {" - "}
+                                    {new Date(dec.end_date).toLocaleTimeString("es-CL", {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                    })}
+                                </>
+                            )}
+                            <br />
+                            <span className="text-[10px]">
+                                {new Date(dec.incident_date).toLocaleDateString("es-CL", {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric",
+                                })}
+                            </span>
                         </span>
                     </div>
 

@@ -4,6 +4,7 @@ import { useState } from "react"
 import { toast } from "sonner"
 import { KeyRound, Eye, EyeOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { logAdminAction } from "@/lib/admin/log-action"
 import {
     Dialog, DialogContent, DialogHeader,
     DialogTitle, DialogDescription, DialogTrigger,
@@ -37,6 +38,12 @@ export function ResetPasswordButton({ studentId, studentName }: Props) {
             const json = await res.json()
             if (!res.ok) throw new Error(json.error ?? "Error al cambiar la contraseña.")
 
+            await logAdminAction({
+                action: "reset_student_password",
+                entityType: "student",
+                entityId: studentId,
+                entityDescription: studentName,
+            })
             toast.success(`Contraseña actualizada para ${studentName}.`)
             setPassword("")
             setOpen(false)
@@ -100,11 +107,11 @@ export function ResetPasswordButton({ studentId, studentName }: Props) {
                                     <div
                                         key={i}
                                         className={`h-1 flex-1 rounded-full transition-colors ${password.length >= i * 3
-                                                ? i <= 1 ? "bg-rose-400"
-                                                    : i <= 2 ? "bg-amber-400"
-                                                        : i <= 3 ? "bg-indigo-400"
-                                                            : "bg-emerald-400"
-                                                : "bg-slate-100"
+                                            ? i <= 1 ? "bg-rose-400"
+                                                : i <= 2 ? "bg-amber-400"
+                                                    : i <= 3 ? "bg-indigo-400"
+                                                        : "bg-emerald-400"
+                                            : "bg-slate-100"
                                             }`}
                                     />
                                 ))}

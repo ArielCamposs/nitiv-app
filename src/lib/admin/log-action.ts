@@ -1,13 +1,41 @@
 import { createClient } from "@/lib/supabase/client"
 
 export type AdminAction =
-    | "delete_incident"
-    | "edit_incident"
-    | "resolve_incident"
+    // Emotional logs
     | "delete_emotional_log"
     | "edit_emotional_log"
+    // Incidents
+    | "edit_incident"
+    | "delete_incident"
+    | "resolve_incident"
+    // Students
+    | "create_student"
+    | "edit_student"
+    | "toggle_student_active"
+    | "reset_student_password"
+    // Courses
+    | "create_course"
+    | "edit_course"
+    | "toggle_course_active"
+    | "assign_teacher_to_course"
+    | "remove_teacher_from_course"
+    | "assign_student_to_course"
+    | "remove_student_from_course"
+    // Staff users
+    | "create_user"
+    | "edit_user"
+    | "toggle_user_active"
+    | "reset_user_password"
+    // Institution
+    | "edit_institution"
 
-export type EntityType = "incident" | "emotional_log"
+export type EntityType =
+    | "emotional_log"
+    | "incident"
+    | "student"
+    | "course"
+    | "user"
+    | "institution"
 
 type LogPayload = {
     action: AdminAction

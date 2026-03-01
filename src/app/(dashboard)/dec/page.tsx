@@ -32,6 +32,7 @@ async function getDecCases() {
             severity,
             location,
             incident_date,
+            end_date,
             resolved,
             students (
                 id,

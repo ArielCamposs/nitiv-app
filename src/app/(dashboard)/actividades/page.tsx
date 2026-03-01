@@ -3,7 +3,7 @@ import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import { ActivitiesClient } from "@/components/activities/ActivitiesClient"
 
-const CAN_MANAGE_ROLES = ["dupla", "convivencia", "director", "admin"]
+const CAN_MANAGE_ROLES = ["dupla", "convivencia", "director", "admin", "docente"]
 
 async function getActivitiesData() {
     const cookieStore = await cookies()

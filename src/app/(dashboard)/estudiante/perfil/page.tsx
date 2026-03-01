@@ -98,6 +98,7 @@ export default async function PerfilEstudiantePage() {
             severity,
             location,
             incident_date,
+            end_date,
             resolved,
             users!reporter_id (
                 name,
@@ -389,6 +390,7 @@ export default async function PerfilEstudiantePage() {
                                                     </div>
                                                     <p className="text-xs text-slate-500">
                                                         Fecha: {new Date(dec.incident_date).toLocaleDateString("es-CL", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                                        {dec.end_date && ` - ${new Date(dec.end_date).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}`}
                                                     </p>
                                                     {dec.location && (
                                                         <p className="text-xs text-slate-500 mt-0.5">Lugar: {dec.location}</p>

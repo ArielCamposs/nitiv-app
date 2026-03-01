@@ -32,6 +32,7 @@ type Incident = {
     description: string | null
     guardian_contacted: boolean
     incident_date: string
+    end_date?: string | null
 }
 
 const TYPE_OPTIONS = [
@@ -58,6 +59,7 @@ export function DecEditForm({ incident }: { incident: Incident }) {
         description: incident.description ?? "",
         guardian_contacted: incident.guardian_contacted,
         incident_date: incident.incident_date?.slice(0, 16) ?? "",
+        end_date: incident.end_date?.slice(0, 16) ?? "",
         conduct_types: (incident.conduct_types ?? []).join(", "),
         triggers: (incident.triggers ?? []).join(", "),
         actions_taken: (incident.actions_taken ?? []).join(", "),
@@ -81,6 +83,7 @@ export function DecEditForm({ incident }: { incident: Incident }) {
                 description: form.description || null,
                 guardian_contacted: form.guardian_contacted,
                 incident_date: form.incident_date,
+                end_date: form.end_date || null,
                 conduct_types: toArray(form.conduct_types),
                 triggers: toArray(form.triggers),
                 actions_taken: toArray(form.actions_taken),
@@ -104,6 +107,7 @@ export function DecEditForm({ incident }: { incident: Incident }) {
                     description: incident.description,
                     guardian_contacted: incident.guardian_contacted,
                     incident_date: incident.incident_date,
+                    end_date: incident.end_date,
                     conduct_types: incident.conduct_types,
                     triggers: incident.triggers,
                     actions_taken: incident.actions_taken,
@@ -116,6 +120,7 @@ export function DecEditForm({ incident }: { incident: Incident }) {
                     description: form.description || null,
                     guardian_contacted: form.guardian_contacted,
                     incident_date: form.incident_date,
+                    end_date: form.end_date || null,
                     conduct_types: toArray(form.conduct_types),
                     triggers: toArray(form.triggers),
                     actions_taken: toArray(form.actions_taken),
@@ -174,11 +179,20 @@ export function DecEditForm({ incident }: { incident: Incident }) {
                         </div>
 
                         <div className="space-y-1.5">
-                            <Label>Fecha y hora</Label>
+                            <Label>Hora de inicio</Label>
                             <Input
                                 type="datetime-local"
                                 value={form.incident_date}
                                 onChange={(e) => set("incident_date", e.target.value)}
+                            />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <Label>Hora de término</Label>
+                            <Input
+                                type="datetime-local"
+                                value={form.end_date}
+                                onChange={(e) => set("end_date", e.target.value)}
                             />
                         </div>
 

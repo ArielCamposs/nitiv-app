@@ -10,8 +10,8 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import {
-    LayoutDashboard, Zap, UserCog, GraduationCap, School,
-    Shield, LifeBuoy, ClipboardList, Activity, BarChart3,
+    LayoutDashboard, UserCog, GraduationCap, School,
+    ClipboardList, Activity, BarChart3,
     FileText, Calendar, BookOpen, Library, MessageSquare,
     Building2, LogOut,
 } from "lucide-react"
@@ -35,7 +35,6 @@ const ADMIN_GROUPS: NavGroup[] = [
         label: "Panel de Control",
         items: [
             { title: "Inicio", href: "/admin", icon: LayoutDashboard },
-            { title: "Modo Pulso", href: "/admin/pulso", icon: Zap },
         ],
     },
     {
@@ -44,14 +43,6 @@ const ADMIN_GROUPS: NavGroup[] = [
             { title: "Usuarios", href: "/admin/usuarios", icon: UserCog },
             { title: "Estudiantes", href: "/admin/estudiantes", icon: GraduationCap },
             { title: "Cursos", href: "/admin/cursos", icon: School },
-        ],
-    },
-    {
-        label: "Registro y Casos",
-        items: [
-            { title: "Registro DEC", href: "/admin/dec", icon: Shield, badge: true },
-            { title: "PAEC", href: "/paec", icon: LifeBuoy },
-            { title: "Historial", href: "/admin/historial", icon: ClipboardList },
         ],
     },
     {

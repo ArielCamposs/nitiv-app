@@ -4,11 +4,29 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 
 const ACTION_META: Record<string, { label: string; color: string }> = {
-    delete_incident: { label: "Eliminó caso DEC", color: "bg-rose-100 text-rose-700" },
-    edit_incident: { label: "Editó caso DEC", color: "bg-amber-100 text-amber-700" },
-    resolve_incident: { label: "Resolvió caso DEC", color: "bg-emerald-100 text-emerald-700" },
-    delete_emotional_log: { label: "Eliminó registro emoc.", color: "bg-rose-100 text-rose-700" },
-    edit_emotional_log: { label: "Editó registro emoc.", color: "bg-amber-100 text-amber-700" },
+    // Registros emocionales
+    delete_emotional_log: { label: "Eliminó registro emocional", color: "bg-rose-100 text-rose-700" },
+    edit_emotional_log: { label: "Editó registro emocional", color: "bg-amber-100 text-amber-700" },
+    // Estudiantes
+    create_student: { label: "Creó estudiante", color: "bg-emerald-100 text-emerald-700" },
+    edit_student: { label: "Editó estudiante", color: "bg-amber-100 text-amber-700" },
+    toggle_student_active: { label: "Cambió estado estudiante", color: "bg-slate-100 text-slate-600" },
+    reset_student_password: { label: "Cambió contraseña estudiante", color: "bg-indigo-100 text-indigo-700" },
+    assign_student_to_course: { label: "Asignó estudiante a curso", color: "bg-sky-100 text-sky-700" },
+    remove_student_from_course: { label: "Removió estudiante de curso", color: "bg-orange-100 text-orange-700" },
+    // Cursos
+    create_course: { label: "Creó curso", color: "bg-emerald-100 text-emerald-700" },
+    edit_course: { label: "Editó curso", color: "bg-amber-100 text-amber-700" },
+    toggle_course_active: { label: "Cambió estado de curso", color: "bg-slate-100 text-slate-600" },
+    assign_teacher_to_course: { label: "Asignó docente a curso", color: "bg-sky-100 text-sky-700" },
+    remove_teacher_from_course: { label: "Removió docente de curso", color: "bg-orange-100 text-orange-700" },
+    // Usuarios staff
+    create_user: { label: "Creó usuario staff", color: "bg-emerald-100 text-emerald-700" },
+    edit_user: { label: "Editó usuario staff", color: "bg-amber-100 text-amber-700" },
+    toggle_user_active: { label: "Cambió estado usuario", color: "bg-slate-100 text-slate-600" },
+    reset_user_password: { label: "Cambió contraseña usuario", color: "bg-indigo-100 text-indigo-700" },
+    // Institución
+    edit_institution: { label: "Editó datos de institución", color: "bg-purple-100 text-purple-700" },
 }
 
 export default async function AdminAuditoriaPage() {

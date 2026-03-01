@@ -19,6 +19,7 @@ import {
 import {
     Plus, Clock, MapPin, Users, BookOpen,
     Star, MessageSquare, ChevronDown, ChevronUp, Calendar,
+    Palette, Mic, PartyPopper, GraduationCap, Trophy, Pin
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -41,9 +42,9 @@ const TYPE_LABELS: Record<string, string> = {
     ceremonia: "Ceremonia", deportivo: "Deportivo", otro: "Otro",
 }
 
-const TYPE_ICONS: Record<string, string> = {
-    taller: "🛠️", charla: "🎤", evento: "🎉",
-    ceremonia: "🎓", deportivo: "⚽", otro: "📌",
+const TYPE_ICONS: Record<string, React.ElementType> = {
+    taller: Palette, charla: Mic, evento: PartyPopper,
+    ceremonia: GraduationCap, deportivo: Trophy, otro: Pin,
 }
 
 const RATING_LABELS: Record<number, string> = {
@@ -251,8 +252,11 @@ function ActivityModal({
                 <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
                         <div className="flex items-center gap-2 mb-1">
-                            <span className="text-2xl">
-                                {TYPE_ICONS[activity.activity_type] ?? "📌"}
+                            <span className="text-xl shrink-0 text-slate-400">
+                                {TYPE_ICONS[activity.activity_type] ? (() => {
+                                    const IconInfo = TYPE_ICONS[activity.activity_type]
+                                    return <IconInfo className="w-6 h-6" />
+                                })() : <Pin className="w-6 h-6" />}
                             </span>
                             <DialogTitle className="text-lg leading-snug">
                                 {activity.title}
@@ -537,8 +541,11 @@ function ActivityCard({
                 )}
             >
                 <div className="flex items-center gap-3">
-                    <span className="text-xl shrink-0">
-                        {TYPE_ICONS[activity.activity_type] ?? "📌"}
+                    <span className="text-xl shrink-0 text-slate-400">
+                        {TYPE_ICONS[activity.activity_type] ? (() => {
+                            const IconCard = TYPE_ICONS[activity.activity_type]
+                            return <IconCard className="w-5 h-5" />
+                        })() : <Pin className="w-5 h-5" />}
                     </span>
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
